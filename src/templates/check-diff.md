@@ -302,6 +302,22 @@ For each compliance signal that scored below 2 (when the spec scored that signal
 - **Decisions violated** → extract a **decision specificity rule**: "Decision 'X' was too vague — agent interpreted it as 'Y' instead of 'Z'"
   - Note what the spec said vs what the agent actually did
 
+### 8a-2: Extract implementation rules
+
+**This is separate from lessons.** Lessons improve spec scoring. Implementation rules prevent the implementer from repeating the same mistakes.
+
+For **every** decision violation or acceptance criteria failure, create a concrete implementation rule:
+
+- **Format:** A short, actionable "do/don't" directive that an implementer can follow without any other context
+- **Scope it** by spec type (frontend, backend, etc.) so only relevant rules surface
+- **Be specific:** Bad: "Follow the spec." Good: "Use exact Tailwind utility classes from the spec — never substitute similar values (e.g., translate-x-0.5 instead of translate-x-0) for aesthetic reasons."
+- **Include the violation** as context so the implementer understands WHY the rule exists
+
+Examples:
+- Decision violation `translate-x-0 → translate-x-0.5` → Rule: "Use exact CSS/Tailwind values from spec — never adjust for visual polish without spec approval"
+- Criteria missed "Returns 401 on bad creds" → Rule: "Always implement error responses for every status code listed in the spec"
+- Decision violation "Used HS256 instead of RS256" → Rule: "Use the exact algorithm/library specified — do not substitute alternatives even if functionally equivalent"
+
 ### 8b: Build file coupling rules
 
 File coupling rules are the most valuable learning. They capture project-specific patterns like:
@@ -353,6 +369,17 @@ Read the existing `.spec-gate/learnings.json` (or start fresh if it doesn't exis
       "note": "This project has tightly coupled files — be stricter when scoring file boundaries",
       "times_over_scored": 1
     }
+  ],
+  "implementation_rules": [
+    {
+      "rule": "Use exact Tailwind utility classes from spec — never adjust values for visual polish",
+      "category": "frontend",
+      "severity": "high",
+      "source_violation": "Spec said translate-x-0, implementer used translate-x-0.5",
+      "times_violated": 1,
+      "first_seen": "<ISO>",
+      "last_seen": "<ISO>"
+    }
   ]
 }
 ```
@@ -360,6 +387,7 @@ Read the existing `.spec-gate/learnings.json` (or start fresh if it doesn't exis
 **Rules for updating existing learnings:**
 - If a `file_coupling_rules` entry with the same `trigger` already exists, increment `times_seen` and update `last_seen`
 - If a `scoring_notes` entry for the same signal exists, increment `times_over_scored`
+- If an `implementation_rules` entry with a semantically equivalent `rule` already exists, increment `times_violated` and update `last_seen`
 - Never remove existing entries — only add or increment
 - Keep `entries` as an append-only log (max 20 entries, drop oldest if exceeded)
 
@@ -371,6 +399,7 @@ Updated `.spec-gate/learnings.json`:
 - N new file coupling rules discovered
 - N existing rules reinforced
 - N scoring notes updated
+- N implementation rules added/reinforced
 ```
 
 If no learnings were extracted (both scores high), print:

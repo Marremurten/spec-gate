@@ -64,7 +64,13 @@ If learnings have 3+ entries, generate a project-specific checklist of things sp
 
 Store this checklist internally. In Step 6 (refinement), if the spec is missing items from the checklist, include them as pre-filled suggestions in the questions.
 
-**Do NOT output learnings or the checklist to the user during this step.** Use them silently to inform scoring and refinement questions.
+### 3e: Implementation rules
+
+Extract `implementation_rules` from learnings. These are concrete "do/don't" rules learned from past implementation mistakes — things the spec was specific about but the implementer still got wrong. Filter rules by `category` matching the current spec's detected type.
+
+These rules will be included in the refined spec output (Step 7) so the implementer sees them before coding. They are the key mechanism for preventing repeated mistakes.
+
+**Do NOT output learnings, the checklist, or implementation rules to the user during this step.** Use them silently to inform scoring, refinement questions, and the refined spec output.
 
 ## Step 4: Detect workflow
 
@@ -213,7 +219,22 @@ Using the original spec plus the user's answers, produce a **refined spec block*
 
 **Suggested tests:**
 - <test cases derived from acceptance criteria — each criterion that can be verified programmatically becomes a test>
+
+**Implementation warnings (from past learnings):**
+- <rules from learnings.json implementation_rules matching this spec's category>
+- <only include if implementation_rules exist and match the spec type>
 ```
+
+### Include implementation warnings
+
+If `.spec-gate/learnings.json` has `implementation_rules` entries whose `category` matches the current spec type (or category is "general"), include them in the refined spec under **Implementation warnings**. These are concrete "do/don't" rules from past mistakes that the implementer MUST follow.
+
+Format each rule as a clear directive with the original violation as context:
+- "Use exact Tailwind utility classes from spec — never adjust values for visual polish (past violation: `translate-x-0` was changed to `translate-x-0.5`)"
+
+If there are no matching implementation rules, omit the **Implementation warnings** section entirely.
+
+**These warnings are critical.** They are the mechanism that prevents the same implementation mistake from happening twice. The implementer reads the refined spec before coding and sees exactly what went wrong last time.
 
 ### Generate test suggestions
 
