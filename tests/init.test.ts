@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { existsSync, readFileSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { init } from "../src/commands/init.js";
 
@@ -23,8 +23,8 @@ describe("init command", () => {
     expect(existsSync(join(root, ".claude/skills/check-spec/SKILL.md"))).toBe(true);
     expect(existsSync(join(root, ".claude/skills/check-diff/SKILL.md"))).toBe(true);
     expect(existsSync(join(root, ".claude/skills/check-determinism/SKILL.md"))).toBe(true);
-    expect(existsSync(join(root, ".claude/agents/spec-guard-validator.md"))).toBe(true);
-    expect(existsSync(join(root, ".spec-guard.json"))).toBe(true);
+    expect(existsSync(join(root, ".claude/agents/spec-gate-validator.md"))).toBe(true);
+    expect(existsSync(join(root, ".spec-gate.json"))).toBe(true);
     expect(existsSync(join(root, ".claude/settings.json"))).toBe(true);
   });
 
@@ -52,8 +52,8 @@ describe("init command", () => {
     expect(existsSync(join(root, ".claude/skills/check-spec/SKILL.md"))).toBe(true);
     expect(existsSync(join(root, ".claude/skills/check-diff/SKILL.md"))).toBe(true);
     expect(existsSync(join(root, ".claude/skills/check-determinism/SKILL.md"))).toBe(true);
-    expect(existsSync(join(root, ".spec-guard.json"))).toBe(true);
-    expect(existsSync(join(root, ".claude/agents/spec-guard-validator.md"))).toBe(false);
+    expect(existsSync(join(root, ".spec-gate.json"))).toBe(true);
+    expect(existsSync(join(root, ".claude/agents/spec-gate-validator.md"))).toBe(false);
     // settings.json should NOT have hook when --skills-only
     expect(existsSync(join(root, ".claude/settings.json"))).toBe(false);
   });
@@ -62,11 +62,11 @@ describe("init command", () => {
     const root = setup();
     init(root, { skillsOnly: false, hooksOnly: true, force: false });
 
-    expect(existsSync(join(root, ".claude/agents/spec-guard-validator.md"))).toBe(true);
+    expect(existsSync(join(root, ".claude/agents/spec-gate-validator.md"))).toBe(true);
     expect(existsSync(join(root, ".claude/skills/check-spec/SKILL.md"))).toBe(false);
     expect(existsSync(join(root, ".claude/skills/check-diff/SKILL.md"))).toBe(false);
     expect(existsSync(join(root, ".claude/skills/check-determinism/SKILL.md"))).toBe(false);
-    expect(existsSync(join(root, ".spec-guard.json"))).toBe(false);
+    expect(existsSync(join(root, ".spec-gate.json"))).toBe(false);
   });
 
   it("does not overwrite existing files without --force", () => {
@@ -93,10 +93,12 @@ describe("init command", () => {
     expect(content).not.toBe("custom content");
     expect(content).toContain("name: check-spec");
 
-    // Backup should exist
-    const backupPath = join(root, ".spec-guard/backups/.claude__skills__check-spec__SKILL.md");
-    expect(existsSync(backupPath)).toBe(true);
-    const backupContent = readFileSync(backupPath, "utf-8");
+    // Backup should exist in .spec-gate/backups/ with timestamp
+    const backupDir = join(root, ".spec-gate/backups");
+    const backups = readdirSync(backupDir);
+    const backup = backups.find((f: string) => f.startsWith(".claude__skills__check-spec__SKILL.md"));
+    expect(backup).toBeDefined();
+    const backupContent = readFileSync(join(backupDir, backup!), "utf-8");
     expect(backupContent).toBe("custom content");
   });
 
@@ -106,7 +108,7 @@ describe("init command", () => {
 
     const settings = JSON.parse(readFileSync(join(root, ".claude/settings.json"), "utf-8"));
     expect(settings.hooks.Stop).toEqual([
-      { type: "agent", agent: "spec-guard-validator" },
+      { type: "agent", agent: "spec-gate-validator" },
     ]);
   });
 });

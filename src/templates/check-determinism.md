@@ -4,9 +4,9 @@ description: Test if a spec truly produces identical output by running two indep
 argument-hint: [path-to-spec-or-contract]
 ---
 
-# Spec Guard — Determinism Test
+# Spec Gate — Determinism Test
 
-You are running the ultimate validation: **does this spec actually produce identical output when given to two independent agents?** This tests the core premise of spec-guard — a 10/10 spec should yield the same code every time.
+You are running the ultimate validation: **does this spec actually produce identical output when given to two independent agents?** This tests the core premise of spec-gate — a 10/10 spec should yield the same code every time.
 
 This is an expensive operation (two full implementations) so it's opt-in via `/check-determinism`.
 
@@ -15,13 +15,13 @@ This is an expensive operation (two full implementations) so it's opt-in via `/c
 Find the spec to test using this priority order:
 
 1. If `$ARGUMENTS` is a file path → read that file
-2. Read `.spec-guard/refined-spec.md` if it exists (preferred — already refined)
-3. Read `.spec-guard/contract.json` and use the `refined_spec` field
+2. Read `.spec-gate/refined-spec.md` if it exists (preferred — already refined)
+3. Read `.spec-gate/contract.json` and use the `refined_spec` field
 4. Fall back to conversation context
 
 If no spec is found, tell the user and stop.
 
-Also read `.spec-guard/contract.json` if it exists — you'll compare the determinism score against actual results.
+Also read `.spec-gate/contract.json` if it exists — you'll compare the determinism score against actual results.
 
 ## Step 2: Confirm with user
 
@@ -43,19 +43,9 @@ Use AskUserQuestion:
 - **"Run test"** — Proceed with the determinism test
 - **"Cancel"** — Stop
 
-## Step 3: Create worktrees and run implementations
+## Step 3: Run two independent implementations
 
-### 3a: Create two isolated worktrees
-
-Use Bash to create two git worktrees:
-```bash
-git worktree add .spec-guard/worktree-a -b spec-guard-test-a
-git worktree add .spec-guard/worktree-b -b spec-guard-test-b
-```
-
-### 3b: Run two independent implementations
-
-Use the Agent tool to spawn **two agents in parallel**, each in their own worktree with `isolation: "worktree"`. Each agent gets the exact same prompt — the refined spec and nothing else. No additional context, no hints, no conversation history.
+Use the Agent tool to spawn **two agents in parallel**, each with `isolation: "worktree"` so they get their own isolated copy of the repository. Each agent gets the exact same prompt — the refined spec and nothing else. No additional context, no hints, no conversation history.
 
 **Agent A prompt:**
 ```
@@ -90,11 +80,8 @@ Launch both agents simultaneously using parallel Agent tool calls. Wait for both
 After both agents finish, compare their implementations:
 
 ### 4a: File-level comparison
-```bash
-# Get list of files changed by each agent
-cd .spec-guard/worktree-a && git diff --name-only HEAD
-cd .spec-guard/worktree-b && git diff --name-only HEAD
-```
+
+Use the worktree paths returned by the Agent tool results to compare outputs. Run `git diff --name-only HEAD` in each agent's worktree path.
 
 Compare the two file lists:
 - **Identical files:** Both agents changed the same files
@@ -102,9 +89,9 @@ Compare the two file lists:
 - **B-only files:** Agent B changed but A didn't
 
 ### 4b: Content comparison
-For each file that both agents changed, run a diff between the two versions:
+For each file that both agents changed, run a diff between the two versions using the worktree paths from the Agent tool results:
 ```bash
-diff .spec-guard/worktree-a/<file> .spec-guard/worktree-b/<file>
+diff <worktree-a-path>/<file> <worktree-b-path>/<file>
 ```
 
 Categorize differences:
@@ -135,7 +122,7 @@ Calculate: `actual_determinism = round((raw_total / 20) * 10)` where `raw_total 
 ## Step 6: Print report
 
 ```
-## Spec Guard — Determinism Test Results
+## Spec Gate — Determinism Test Results
 
 **Spec:** <path>
 **Spec type:** <spec_type from contract, or "fullstack" if not present>
@@ -202,7 +189,7 @@ Print:
 ## Step 8: Write results and clean up
 
 ### 8a: Save results
-Write results to `.spec-guard/determinism-test.json`:
+Write results to `.spec-gate/determinism-test.json`:
 ```json
 {
   "timestamp": "<ISO>",
@@ -225,7 +212,7 @@ Write results to `.spec-guard/determinism-test.json`:
 
 ### 8b: Update learnings
 
-Divergence patterns from real agent behavior are the most valuable learnings — they prove exactly where specs fail. Read `.spec-guard/learnings.json` (or start fresh if it doesn't exist) and append new data.
+Divergence patterns from real agent behavior are the most valuable learnings — they prove exactly where specs fail. Read `.spec-gate/learnings.json` (or start fresh if it doesn't exist) and append new data.
 
 #### What to extract from divergences
 
@@ -275,16 +262,17 @@ Also update `scoring_notes` if the predicted score was significantly higher than
 - Mark entries from determinism tests with `"source": "determinism_test"` so `/check-spec` can distinguish them from `/check-diff` learnings
 
 ### 8c: Clean up worktrees
+
+If the Agent tool worktrees were not automatically cleaned up, remove them using the paths returned by the Agent tool results:
 ```bash
-git worktree remove .spec-guard/worktree-a --force
-git worktree remove .spec-guard/worktree-b --force
-git branch -D spec-guard-test-a spec-guard-test-b
+git worktree remove <worktree-a-path> --force
+git worktree remove <worktree-b-path> --force
 ```
 
 Print:
 ```
 ### Results saved
-- Determinism test results: `.spec-guard/determinism-test.json`
+- Determinism test results: `.spec-gate/determinism-test.json`
 - Learnings updated with N divergence patterns
 - Worktrees cleaned up
 ```

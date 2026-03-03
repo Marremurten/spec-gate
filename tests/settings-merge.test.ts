@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from "node:fs";
+import { mkdirSync, writeFileSync, readFileSync, readdirSync, existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { mergeSettings, removeFromSettings } from "../src/scaffold/settings-merge.js";
 
@@ -41,7 +41,7 @@ describe("settings-merge", () => {
       expect(hooks.Stop).toHaveLength(1);
       expect(hooks.Stop[0]).toEqual({
         type: "agent",
-        agent: "spec-guard-validator",
+        agent: "spec-gate-validator",
       });
     });
 
@@ -72,7 +72,7 @@ describe("settings-merge", () => {
       const hooks = settings.hooks as Record<string, unknown[]>;
       expect(hooks.Stop).toHaveLength(2);
       expect(hooks.Stop[0]).toEqual({ type: "command", command: "echo done" });
-      expect(hooks.Stop[1]).toEqual({ type: "agent", agent: "spec-guard-validator" });
+      expect(hooks.Stop[1]).toEqual({ type: "agent", agent: "spec-gate-validator" });
       expect(hooks.PreToolUse).toHaveLength(1);
     });
 
@@ -88,10 +88,10 @@ describe("settings-merge", () => {
       expect(hooks.Stop).toHaveLength(1);
     });
 
-    it("detects existing spec-guard hook by agent name", () => {
+    it("detects existing spec-gate hook by agent name", () => {
       const root = setup({
         hooks: {
-          Stop: [{ type: "agent", agent: "spec-guard-validator" }],
+          Stop: [{ type: "agent", agent: "spec-gate-validator" }],
         },
       });
 
@@ -99,10 +99,10 @@ describe("settings-merge", () => {
       expect(merged).toBe(false);
     });
 
-    it("detects existing spec-guard hook by prompt content", () => {
+    it("detects existing spec-gate hook by prompt content", () => {
       const root = setup({
         hooks: {
-          Stop: [{ type: "prompt", prompt: "Run spec-guard check" }],
+          Stop: [{ type: "prompt", prompt: "Run spec-gate check" }],
         },
       });
 
@@ -114,18 +114,20 @@ describe("settings-merge", () => {
       const root = setup({ existing: true });
       const { backupPath } = mergeSettings(root);
 
-      expect(backupPath).toBe(".spec-guard/backups/settings.json.bak");
-      expect(existsSync(join(root, ".spec-guard", "backups", "settings.json.bak"))).toBe(true);
+      expect(backupPath).toMatch(/^\.spec-gate\/backups\/settings\.json\.\d+\.bak$/);
+      const backupDir = join(root, ".spec-gate", "backups");
+      const backups = readdirSync(backupDir);
+      expect(backups.some((f: string) => f.startsWith("settings.json.") && f.endsWith(".bak"))).toBe(true);
     });
   });
 
   describe("removeFromSettings", () => {
-    it("removes spec-guard hook entries", () => {
+    it("removes spec-gate hook entries", () => {
       const root = setup({
         hooks: {
           Stop: [
             { type: "command", command: "echo done" },
-            { type: "agent", agent: "spec-guard-validator" },
+            { type: "agent", agent: "spec-gate-validator" },
           ],
         },
       });
@@ -142,7 +144,7 @@ describe("settings-merge", () => {
     it("cleans up empty Stop array and hooks object", () => {
       const root = setup({
         hooks: {
-          Stop: [{ type: "agent", agent: "spec-guard-validator" }],
+          Stop: [{ type: "agent", agent: "spec-gate-validator" }],
         },
       });
 
@@ -153,7 +155,7 @@ describe("settings-merge", () => {
       expect(settings.hooks).toBeUndefined();
     });
 
-    it("returns removed=false when no spec-guard hooks exist", () => {
+    it("returns removed=false when no spec-gate hooks exist", () => {
       const root = setup({
         hooks: {
           Stop: [{ type: "command", command: "echo done" }],

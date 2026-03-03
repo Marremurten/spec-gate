@@ -4,7 +4,7 @@ description: Validate an AI spec for determinism before implementation. Scores h
 argument-hint: [path-to-spec-or-phase-number]
 ---
 
-# Spec Guard — Gate 1: Spec Determinism Check
+# Spec Gate — Gate 1: Spec Determinism Check
 
 You are validating a spec for **determinism** — how likely it is that two independent AI agents would produce identical output from this spec alone. If the score is low, you will help the user refine it.
 
@@ -18,7 +18,7 @@ Find the spec to validate using this priority order:
    a. Find the most recently modified `.planning/**/PLAN.md`
    b. Check `.spec-kit/` directory for spec files
    c. Fall back to conversation context (last plan discussed)
-4. Check `.spec-guard.json` for custom `specSources` patterns
+4. Check `.spec-gate.json` for custom `specSources` patterns
 
 If no spec is found, tell the user and stop.
 
@@ -36,7 +36,7 @@ Keep this context for Step 5 (refinement questions). Do NOT output this research
 
 ## Step 3: Load learnings from previous sessions
 
-Read `.spec-guard/learnings.json` if it exists. This file contains lessons learned from previous `/check-diff` runs — patterns where specs scored high but implementations diverged.
+Read `.spec-gate/learnings.json` if it exists. This file contains lessons learned from previous `/check-diff` runs — patterns where specs scored high but implementations diverged.
 
 Extract three things:
 
@@ -234,14 +234,14 @@ If the refined score is still < 8, note which signals remain weak but proceed an
 
 ### Save the refined spec to disk
 
-Write the refined spec to `.spec-guard/refined-spec.md` so it persists across sessions and can be used as input for plan mode or other workflows. This file is the source of truth for what was agreed upon.
+Write the refined spec to `.spec-gate/refined-spec.md` so it persists across sessions and can be used as input for plan mode or other workflows. This file is the source of truth for what was agreed upon.
 
 ## Step 8: Print report
 
 Format your output as:
 
 ```
-## Spec Guard — Determinism Report
+## Spec Gate — Determinism Report
 
 **Spec:** <path or "conversation context">
 **Spec type:** <detected type from Step 4b>
@@ -262,7 +262,7 @@ Format your output as:
 
 ## Step 9: Generate contract
 
-Create the directory `.spec-guard/` if it doesn't exist, then write `.spec-guard/contract.json`:
+Create the directory `.spec-gate/` if it doesn't exist, then write `.spec-gate/contract.json`:
 
 ```json
 {
@@ -280,7 +280,7 @@ Create the directory `.spec-guard/` if it doesn't exist, then write `.spec-guard
   },
   "boundaries": {
     "max_files_changed": "<count of all expected files + 3 buffer>",
-    "max_lines_added": "<estimate based on scope, or default from .spec-guard.json>"
+    "max_lines_added": "<estimate based on scope, or default from .spec-gate.json>"
   },
   "acceptance_criteria": ["<from refined spec>"],
   "determinism_score": "<final score>",
@@ -298,14 +298,14 @@ Create the directory `.spec-guard/` if it doesn't exist, then write `.spec-guard
 
 For `expected_files`: use the refined spec's file list. If refinement didn't happen, extract from the original spec.
 
-For `max_lines_added`: use `boundaries.defaultMaxLinesAdded` from `.spec-guard.json` if it exists, otherwise default to 1000.
+For `max_lines_added`: use `boundaries.defaultMaxLinesAdded` from `.spec-gate.json` if it exists, otherwise default to 1000.
 
 For `max_files_changed`: use count of expected files + 3 as buffer, or `boundaries.defaultMaxFiles` from config, whichever is larger.
 
 Print:
 ```
 ### Contract
-Written to `.spec-guard/contract.json`
+Written to `.spec-gate/contract.json`
 - Expected files: N modify, N create, N delete
 - Boundaries: max N files, max N lines added
 - Acceptance criteria: N items
@@ -318,19 +318,19 @@ After printing the contract summary, ask the user how they want to proceed.
 
 Use AskUserQuestion with these options:
 
-- **"Implement now"** — Proceed to implement immediately using the refined spec as your guide. Follow the file boundaries, acceptance criteria, and decisions exactly. Only touch files listed in `expected_files`. After implementation, print: `Spec Guard: Implementation complete. Run /check-diff to validate.`
-- **"Plan first, then implement"** — Enter plan mode to design a detailed implementation approach based on the refined spec. Read `.spec-guard/refined-spec.md` as the requirements. The plan should respect the file boundaries and acceptance criteria from the contract. After the plan is approved and implemented, suggest `/check-diff`.
+- **"Implement now"** — Proceed to implement immediately using the refined spec as your guide. Follow the file boundaries, acceptance criteria, and decisions exactly. Only touch files listed in `expected_files`. After implementation, print: `Spec Gate: Implementation complete. Run /check-diff to validate.`
+- **"Plan first, then implement"** — Enter plan mode to design a detailed implementation approach based on the refined spec. Read `.spec-gate/refined-spec.md` as the requirements. The plan should respect the file boundaries and acceptance criteria from the contract. After the plan is approved and implemented, suggest `/check-diff`.
 - **"Done for now"** — Stop. Remind the user:
-  - Refined spec saved to `.spec-guard/refined-spec.md`
-  - Contract saved to `.spec-guard/contract.json`
-  - To implement later: "Implement the spec in `.spec-guard/refined-spec.md`" or start a new session and reference the file
+  - Refined spec saved to `.spec-gate/refined-spec.md`
+  - Contract saved to `.spec-gate/contract.json`
+  - To implement later: "Implement the spec in `.spec-gate/refined-spec.md`" or start a new session and reference the file
   - After implementing, run `/check-diff` to validate
 
 ### Plan mode integration notes
 
 When the user chooses "Plan first, then implement":
 1. Call the EnterPlanMode tool to switch to plan mode
-2. In plan mode, use the refined spec from `.spec-guard/refined-spec.md` as the requirements — do NOT re-ask the questions that were already resolved during refinement
+2. In plan mode, use the refined spec from `.spec-gate/refined-spec.md` as the requirements — do NOT re-ask the questions that were already resolved during refinement
 3. The plan should add implementation detail (component structure, exact code patterns, ordering) but must stay within the boundaries and scope of the refined spec
 4. If the plan needs to expand beyond the contract boundaries (e.g., touching additional files), note this explicitly so the contract can be updated before implementation
 5. After the user approves the plan and implementation completes, suggest `/check-diff`

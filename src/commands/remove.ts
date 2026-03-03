@@ -1,4 +1,4 @@
-import { existsSync, unlinkSync, rmSync, statSync } from "node:fs";
+import { existsSync, unlinkSync, rmSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { getScaffoldFiles } from "../scaffold/files.js";
 import { removeFromSettings } from "../scaffold/settings-merge.js";
@@ -24,14 +24,10 @@ export function remove(projectRoot: string, removeData: boolean): void {
     }
   }
 
-  // Clean up empty skill directories
+  // Clean up empty skill directories only
   for (const dir of dirsToClean) {
-    if (existsSync(dir)) {
-      try {
-        rmSync(dir, { recursive: true });
-      } catch {
-        // Directory not empty or other issue, skip
-      }
+    if (existsSync(dir) && readdirSync(dir).length === 0) {
+      rmSync(dir, { recursive: true });
     }
   }
 
@@ -50,5 +46,5 @@ export function remove(projectRoot: string, removeData: boolean): void {
     }
   }
 
-  console.log("\n  Spec-guard files removed.\n");
+  console.log("\n  Spec-gate files removed.\n");
 }

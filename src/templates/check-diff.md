@@ -5,27 +5,27 @@ argument-hint: [base-branch]
 disable-model-invocation: true
 ---
 
-# Spec Guard — Gate 2: Diff Validation
+# Spec Gate — Gate 2: Diff Validation
 
 You are checking the current git diff against the spec contract to detect **scope creep**, **missing implementation**, **decision violations**, and **spec quality gaps**. If a spec scored high on determinism but the implementation diverges, the spec criteria need to be improved — a 10/10 spec should produce identical output every time.
 
 ## Step 1: Load contract
 
-Read `.spec-guard/contract.json`. If it doesn't exist:
+Read `.spec-gate/contract.json`. If it doesn't exist:
 - Run `git diff --stat` and report raw diff stats only
 - Print: "No contract found. Run `/check-spec` first to generate a contract, or showing raw diff stats."
 - Stop after printing stats.
 
 Extract the `spec_type` field from the contract (defaults to `fullstack` if not present). You'll use this for type-aware decision verification in Step 3e and in the report header.
 
-Also read `.spec-guard.json` for `ignoredPaths` configuration. If `.spec-guard.json` doesn't exist, use these defaults:
+Also read `.spec-gate.json` for `ignoredPaths` configuration. If `.spec-gate.json` doesn't exist, use these defaults:
 ```
 ignoredPaths: ["package-lock.json", "yarn.lock", "pnpm-lock.yaml", "*.snap", ".env*", "*.generated.*"]
 ```
 
-If `.spec-guard/refined-spec.md` exists, read it too — you'll need it for acceptance criteria and decision verification.
+If `.spec-gate/refined-spec.md` exists, read it too — you'll need it for acceptance criteria and decision verification.
 
-Read `.spec-guard/learnings.json` if it exists — you'll append new learnings in Step 8.
+Read `.spec-gate/learnings.json` if it exists — you'll append new learnings in Step 8.
 
 ## Step 2: Get the diff
 
@@ -62,7 +62,7 @@ Collect the list of changed files and the overall stats (insertions/deletions).
 
 ### 3a: Scope creep detection
 Files in diff that are NOT in the contract's `expected_files` (any of modify/create/delete):
-- Filter out files matching `ignoredPaths` patterns from `.spec-guard.json`
+- Filter out files matching `ignoredPaths` patterns from `.spec-gate.json`
 - Remaining files are **scope creep candidates**
 
 ### 3b: Missing implementation
@@ -115,7 +115,7 @@ Use the `spec_type` from the contract to focus on the right kind of decisions:
 For each decision, score: **✓ followed**, **✗ violated**, **? cannot verify from diff alone**
 
 ### 3f: Restricted path check
-If `.spec-guard.json` defines `restrictedPaths`, check if any changed files match those patterns.
+If `.spec-gate.json` defines `restrictedPaths`, check if any changed files match those patterns.
 
 ## Step 4: Score compliance
 
@@ -134,9 +134,9 @@ Calculate: `compliance_score = round((raw_total / 20) * 10)` where `raw_total = 
 ## Step 5: Print report
 
 ```
-## Spec Guard — Diff Compliance Report
+## Spec Gate — Diff Compliance Report
 
-**Contract:** .spec-guard/contract.json
+**Contract:** .spec-gate/contract.json
 **Spec type:** <spec_type from contract, or "fullstack" if not present>
 **Spec determinism score:** N/10
 **Diff compliance score:** N/10
@@ -247,7 +247,7 @@ The spec was already flagged as under-specified (N/10). Consider running `/check
 
 ## Step 7: Update contract with results
 
-Write the compliance results back to `.spec-guard/contract.json` by adding these fields:
+Write the compliance results back to `.spec-gate/contract.json` by adding these fields:
 
 ```json
 {
@@ -280,7 +280,7 @@ Write the compliance results back to `.spec-guard/contract.json` by adding these
 
 ## Step 8: Write learnings
 
-This is what makes spec-guard self-improving across sessions. Update `.spec-guard/learnings.json` with what was learned from this compliance check.
+This is what makes spec-gate self-improving across sessions. Update `.spec-gate/learnings.json` with what was learned from this compliance check.
 
 ### 8a: Extract lessons
 
@@ -314,7 +314,7 @@ To detect these, look at the scope creep files and check if they share a directo
 
 ### 8c: Write to learnings.json
 
-Read the existing `.spec-guard/learnings.json` (or start fresh if it doesn't exist). Append new data:
+Read the existing `.spec-gate/learnings.json` (or start fresh if it doesn't exist). Append new data:
 
 ```json
 {
@@ -367,7 +367,7 @@ Read the existing `.spec-guard/learnings.json` (or start fresh if it doesn't exi
 
 ```
 ### Learnings saved
-Updated `.spec-guard/learnings.json`:
+Updated `.spec-gate/learnings.json`:
 - N new file coupling rules discovered
 - N existing rules reinforced
 - N scoring notes updated

@@ -12,7 +12,7 @@ export function update(projectRoot: string): void {
     process.exit(1);
   }
 
-  const files = getScaffoldFiles();
+  const files = getScaffoldFiles().filter(f => f.category !== "config");
   const results = writeScaffoldFiles(projectRoot, files, true);
 
   console.log("\n  spec-gate update\n");

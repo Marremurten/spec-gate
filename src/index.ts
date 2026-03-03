@@ -2,6 +2,8 @@ import { init } from "./commands/init.js";
 import { update } from "./commands/update.js";
 import { remove } from "./commands/remove.js";
 
+declare const __VERSION__: string;
+
 const args = process.argv.slice(2);
 const command = args[0];
 
@@ -25,6 +27,9 @@ function printUsage(): void {
 
   Remove options:
     --data          Also remove .spec-gate/ directory (contracts, backups)
+
+  Other:
+    --version, -v   Print version
   `);
 }
 
@@ -45,6 +50,11 @@ switch (command) {
 
   case "remove":
     remove(projectRoot, hasFlag("data"));
+    break;
+
+  case "--version":
+  case "-v":
+    console.log(__VERSION__);
     break;
 
   default:

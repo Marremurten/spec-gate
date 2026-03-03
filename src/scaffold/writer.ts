@@ -29,15 +29,16 @@ export function writeScaffoldFiles(
     }
 
     if (existsSync(fullPath) && force) {
-      const backupDir = join(projectRoot, ".spec-guard", "backups");
+      const backupDir = join(projectRoot, ".spec-gate", "backups");
       mkdirSync(backupDir, { recursive: true });
-      const backupName = file.target.replace(/\//g, "__");
+      const ts = Date.now();
+      const backupName = `${file.target.replace(/\//g, "__")}.${ts}`;
       const backupPath = join(backupDir, backupName);
       copyFileSync(fullPath, backupPath);
       results.push({
         target: file.target,
         action: "overwritten",
-        backedUp: `.spec-guard/backups/${backupName}`,
+        backedUp: `.spec-gate/backups/${backupName}`,
       });
     } else {
       results.push({ target: file.target, action: "created" });

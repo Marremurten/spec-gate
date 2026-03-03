@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync, copyFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 
-const SPEC_GUARD_MARKER = "spec-guard";
+const SPEC_GATE_MARKER = "spec-gate";
 
 interface HookEntry {
   type: string;
@@ -28,28 +28,34 @@ function readSettings(settingsPath: string): Settings {
     return {};
   }
   const raw = readFileSync(settingsPath, "utf-8");
-  return JSON.parse(raw) as Settings;
+  try {
+    return JSON.parse(raw) as Settings;
+  } catch {
+    console.error(`  Warning: could not parse ${settingsPath} — treating as empty.`);
+    return {};
+  }
 }
 
 function backupSettings(settingsPath: string, projectRoot: string): string | null {
   if (!existsSync(settingsPath)) return null;
-  const backupDir = join(projectRoot, ".spec-guard", "backups");
+  const backupDir = join(projectRoot, ".spec-gate", "backups");
   mkdirSync(backupDir, { recursive: true });
-  const backupPath = join(backupDir, "settings.json.bak");
+  const ts = Date.now();
+  const backupPath = join(backupDir, `settings.json.${ts}.bak`);
   copyFileSync(settingsPath, backupPath);
-  return ".spec-guard/backups/settings.json.bak";
+  return `.spec-gate/backups/settings.json.${ts}.bak`;
 }
 
 function isSpecGuardHook(entry: HookEntry): boolean {
   const prompt = entry.prompt || "";
   const agent = entry.agent || "";
-  return prompt.includes(SPEC_GUARD_MARKER) || agent.includes(SPEC_GUARD_MARKER);
+  return prompt.includes(SPEC_GATE_MARKER) || agent.includes(SPEC_GATE_MARKER);
 }
 
 function getSpecGuardHook(): HookEntry {
   return {
     type: "agent",
-    agent: "spec-guard-validator",
+    agent: "spec-gate-validator",
   };
 }
 

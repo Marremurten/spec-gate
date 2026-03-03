@@ -40,13 +40,13 @@ export function getScaffoldFiles(): ScaffoldFile[] {
       category: "skill",
     },
     {
-      target: ".claude/agents/spec-guard-validator.md",
+      target: ".claude/agents/spec-gate-validator.md",
       content: readTemplate("validator-agent.md"),
       category: "agent",
     },
     {
-      target: ".spec-guard.json",
-      content: readTemplate("spec-guard-config.json"),
+      target: ".spec-gate.json",
+      content: readTemplate("spec-gate-config.json"),
       category: "config",
     },
   ];
