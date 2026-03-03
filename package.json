@@ -1,6 +1,6 @@
 {
   "name": "spec-gate",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "AI spec validation for Claude Code — determinism scoring and diff contract checking",
   "type": "module",
   "bin": {
