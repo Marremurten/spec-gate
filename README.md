@@ -27,22 +27,22 @@ spec-gate adds two validation gates around your implementation:
   ┌──────────────┐          ┌─────────┐           ┌──────────┐
   │ Detect type  │          │         │           │ Score     │
   │ (frontend,   │          │         │           │ diff for  │
-  │  backend...) │          │  Code   │──────────►│ compliance│
-  │      │       │ contract │         │           │ (type-    │
-  │ Score spec   │─────────►│         │           │  aware)   │
-  │ (domain-     │          └─────────┘           └──────────┘
-  │  specific)   │               │                      │
-  └──────────────┘               │                      │
-       ▲                         ▼                      │
-       │              /check-determinism                │
-       │              ┌──────────────┐                  │
-       │              │ Run spec 2x  │                  │
-       │              │ Compare real │                  │
-       │              │ outputs      │                  │
-       │              └──────────────┘                  │
-       │                     │                          │
-       │              learnings.json                    │
-       └───────────────────────────────────────────────┘
+  │  backend...) │ contract │  Code   │──────────►│ compliance│
+  │      │       │────┬────►│         │           │ (type-    │
+  │ Score spec   │    │     │         │           │  aware)   │
+  │ (domain-     │    │     └─────────┘           └──────────┘
+  │  specific)   │    │                                 │
+  └──────────────┘    │                                 │
+       ▲              ▼                                 │
+       │    /check-determinism                          │
+       │    ┌──────────────┐                            │
+       │    │ Run spec 2x  │                            │
+       │    │ before build │                            │
+       │    │ to prove it  │                            │
+       │    └──────────────┘                            │
+       │              │                                 │
+       │        learnings.json                          │
+       └────────────────────────────────────────────────┘
                     self-improving loop
 ```
 
@@ -81,11 +81,11 @@ In Claude Code:
 # Before implementing — score and refine your spec
 /check-spec add JWT auth to the login endpoint
 
+# Optional — prove the spec is deterministic before you build
+/check-determinism
+
 # After implementing — validate the diff
 /check-diff
-
-# Optional: prove your spec is truly deterministic
-/check-determinism
 ```
 
 That's it. No config needed.
@@ -143,7 +143,7 @@ The ultimate validation. Runs the same spec through **two independent agents in 
 - Reports actual determinism: file overlap, content similarity, decision consistency
 - Compares predicted score (from `/check-spec`) against actual results
 
-This is expensive (two full implementations) so it's opt-in. Use it when you want proof that a critical spec truly produces identical output.
+Run this **before implementing** — it validates the spec itself, not your implementation. This is expensive (two full implementations) so it's opt-in. Use it when you want proof that a critical spec is tight enough before you commit to building it.
 
 ## Self-improving loop
 
