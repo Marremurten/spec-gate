@@ -66,8 +66,8 @@ spec-gate init
 This creates:
 ```
 .claude/skills/check-spec/SKILL.md         # /check-spec command
-.claude/skills/check-diff/SKILL.md         # /check-diff command
 .claude/skills/check-determinism/SKILL.md  # /check-determinism command
+.claude/skills/check-diff/SKILL.md         # /check-diff command
 .claude/agents/spec-gate-validator.md     # Stop hook agent
 .claude/settings.json                      # Hook registration
 .spec-gate.json                           # Config
@@ -118,22 +118,6 @@ After refinement, outputs:
 
 Then offers: **Implement now** | **Plan first** | **Done for now**
 
-### `/check-diff [base-branch]`
-
-Compares the actual diff against the contract across 5 compliance signals:
-
-| Signal | Weight | What it measures |
-|--------|--------|-----------------|
-| **File accuracy** | ×3 | Expected files present, no unexpected extras |
-| **Boundary respect** | ×1 | Within file count and line limits |
-| **Acceptance criteria** | ×3 | Each criterion verified against diff evidence |
-| **Scope discipline** | ×1 | No scope creep beyond the contract |
-| **Decision adherence** | ×2 | Technical decisions actually followed in code |
-
-Decision verification is the key differentiator — it doesn't just check *which* files changed, but *what the code actually does*. If the spec says "use jose lib, RS256" but the code imports jsonwebtoken with HS256, check-diff catches it.
-
-Uses the contract timestamp to scope the diff, filtering out pre-existing uncommitted changes.
-
 ### `/check-determinism [--full]`
 
 Tests whether two independent agents would interpret the spec the same way. Run this **before implementing** — it validates the spec itself, not your implementation.
@@ -149,6 +133,22 @@ Both modes:
 - Write divergence patterns to learnings so `/check-spec` gets smarter
 
 Use light mode to quickly spot ambiguity during spec refinement. Use full mode when you need proof that a critical spec truly produces identical code.
+
+### `/check-diff [base-branch]`
+
+Compares the actual diff against the contract across 5 compliance signals:
+
+| Signal | Weight | What it measures |
+|--------|--------|-----------------|
+| **File accuracy** | ×3 | Expected files present, no unexpected extras |
+| **Boundary respect** | ×1 | Within file count and line limits |
+| **Acceptance criteria** | ×3 | Each criterion verified against diff evidence |
+| **Scope discipline** | ×1 | No scope creep beyond the contract |
+| **Decision adherence** | ×2 | Technical decisions actually followed in code |
+
+Decision verification is the key differentiator — it doesn't just check *which* files changed, but *what the code actually does*. If the spec says "use jose lib, RS256" but the code imports jsonwebtoken with HS256, check-diff catches it.
+
+Uses the contract timestamp to scope the diff, filtering out pre-existing uncommitted changes.
 
 ## Self-improving loop
 
@@ -268,8 +268,8 @@ After `init`, these files exist in your project:
 | File | Purpose | Git? |
 |------|---------|------|
 | `.claude/skills/check-spec/SKILL.md` | Gate 1 skill | Yes |
-| `.claude/skills/check-diff/SKILL.md` | Gate 2 skill | Yes |
 | `.claude/skills/check-determinism/SKILL.md` | Determinism test skill | Yes |
+| `.claude/skills/check-diff/SKILL.md` | Gate 2 skill | Yes |
 | `.claude/agents/spec-gate-validator.md` | Stop hook agent | Yes |
 | `.claude/settings.json` | Hook registration | Yes |
 | `.spec-gate.json` | Configuration | Yes |
