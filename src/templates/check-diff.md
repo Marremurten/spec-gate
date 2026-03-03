@@ -318,6 +318,23 @@ Examples:
 - Criteria missed "Returns 401 on bad creds" → Rule: "Always implement error responses for every status code listed in the spec"
 - Decision violation "Used HS256 instead of RS256" → Rule: "Use the exact algorithm/library specified — do not substitute alternatives even if functionally equivalent"
 
+### 8a-3: Classify learnings
+
+Classify each learning extracted in 8a and 8a-2 as `major` or `minor`:
+
+**Major (auto-save without asking):**
+- Decision violations (spec said X, code did Y)
+- Acceptance criteria not met
+- Missing expected files from the contract
+
+**Minor (ask the user first):**
+- Scope creep of 1-3 extra files
+- Boundary slightly exceeded (< 50% over)
+- New file coupling rule suggestions
+- Scoring note adjustments
+
+Tag each lesson, implementation rule, file coupling rule, and scoring note with its classification before proceeding to 8b and 8c.
+
 ### 8b: Build file coupling rules
 
 File coupling rules are the most valuable learning. They capture project-specific patterns like:
@@ -328,9 +345,31 @@ File coupling rules are the most valuable learning. They capture project-specifi
 
 To detect these, look at the scope creep files and check if they share a directory or naming pattern with the expected files.
 
-### 8c: Write to learnings.json
+### 8c-1: Auto-save major learnings
 
-Read the existing `.spec-gate/learnings.json` (or start fresh if it doesn't exist). Append new data:
+Read the existing `.spec-gate/learnings.json` (or start fresh if it doesn't exist). Write all learnings classified as `major` in Step 8a-3 directly — decision violations, criteria failures, and missing-file lessons do not need user approval.
+
+### 8c-2: Present minor learnings for approval
+
+If there are any learnings classified as `minor` in Step 8a-3, present them to the user using `AskUserQuestion` with `multiSelect: true`. Each option should clearly describe the learning so the user can make an informed choice.
+
+Example:
+
+```
+Question: "Should spec-gate learn from these minor findings?"
+Options (multiSelect: true):
+- "File coupling: layout.tsx changes also need globals.css"
+- "Scope creep: agent also touched utils/helpers.ts (not in spec)"
+- "Boundary: 15 files changed vs 12 limit (25% over)"
+```
+
+If there are no minor learnings, skip the question entirely.
+
+Only write user-approved minor learnings to `learnings.json`. Declined minor learnings are discarded.
+
+### 8c-3: Write to learnings.json
+
+Combine auto-saved major learnings and user-approved minor learnings, then append to the file:
 
 ```json
 {
@@ -393,14 +432,23 @@ Read the existing `.spec-gate/learnings.json` (or start fresh if it doesn't exis
 
 ### 8d: Print learnings summary
 
+Distinguish between auto-saved and user-approved learnings in the output:
+
 ```
 ### Learnings saved
-Updated `.spec-gate/learnings.json`:
-- N new file coupling rules discovered
-- N existing rules reinforced
-- N scoring notes updated
+
+Auto-saved (major):
 - N implementation rules added/reinforced
+- N decision violations logged
+- N acceptance criteria failures logged
+
+User-approved (minor):
+- N file coupling rules saved
+- N scoring notes saved
+- Skipped: N minor learnings (user declined)
 ```
+
+If there were no minor learnings to ask about, omit the "User-approved" section entirely.
 
 If no learnings were extracted (both scores high), print:
 
