@@ -20,8 +20,8 @@ describe("init command", () => {
     const root = setup();
     init(root, { skillsOnly: false, hooksOnly: false, force: false });
 
-    expect(existsSync(join(root, ".claude/skills/check-spec.md"))).toBe(true);
-    expect(existsSync(join(root, ".claude/skills/check-diff.md"))).toBe(true);
+    expect(existsSync(join(root, ".claude/skills/check-spec/SKILL.md"))).toBe(true);
+    expect(existsSync(join(root, ".claude/skills/check-diff/SKILL.md"))).toBe(true);
     expect(existsSync(join(root, ".claude/agents/spec-guard-validator.md"))).toBe(true);
     expect(existsSync(join(root, ".spec-guard.json"))).toBe(true);
     expect(existsSync(join(root, ".claude/settings.json"))).toBe(true);
@@ -31,11 +31,11 @@ describe("init command", () => {
     const root = setup();
     init(root, { skillsOnly: false, hooksOnly: false, force: false });
 
-    const checkSpec = readFileSync(join(root, ".claude/skills/check-spec.md"), "utf-8");
+    const checkSpec = readFileSync(join(root, ".claude/skills/check-spec/SKILL.md"), "utf-8");
     expect(checkSpec).toContain("name: check-spec");
-    expect(checkSpec).toContain("disable-model-invocation: true");
+    expect(checkSpec).toContain("argument-hint:");
 
-    const checkDiff = readFileSync(join(root, ".claude/skills/check-diff.md"), "utf-8");
+    const checkDiff = readFileSync(join(root, ".claude/skills/check-diff/SKILL.md"), "utf-8");
     expect(checkDiff).toContain("name: check-diff");
     expect(checkDiff).toContain("disable-model-invocation: true");
   });
@@ -44,8 +44,8 @@ describe("init command", () => {
     const root = setup();
     init(root, { skillsOnly: true, hooksOnly: false, force: false });
 
-    expect(existsSync(join(root, ".claude/skills/check-spec.md"))).toBe(true);
-    expect(existsSync(join(root, ".claude/skills/check-diff.md"))).toBe(true);
+    expect(existsSync(join(root, ".claude/skills/check-spec/SKILL.md"))).toBe(true);
+    expect(existsSync(join(root, ".claude/skills/check-diff/SKILL.md"))).toBe(true);
     expect(existsSync(join(root, ".spec-guard.json"))).toBe(true);
     expect(existsSync(join(root, ".claude/agents/spec-guard-validator.md"))).toBe(false);
     // settings.json should NOT have hook when --skills-only
@@ -57,37 +57,37 @@ describe("init command", () => {
     init(root, { skillsOnly: false, hooksOnly: true, force: false });
 
     expect(existsSync(join(root, ".claude/agents/spec-guard-validator.md"))).toBe(true);
-    expect(existsSync(join(root, ".claude/skills/check-spec.md"))).toBe(false);
-    expect(existsSync(join(root, ".claude/skills/check-diff.md"))).toBe(false);
+    expect(existsSync(join(root, ".claude/skills/check-spec/SKILL.md"))).toBe(false);
+    expect(existsSync(join(root, ".claude/skills/check-diff/SKILL.md"))).toBe(false);
     expect(existsSync(join(root, ".spec-guard.json"))).toBe(false);
   });
 
   it("does not overwrite existing files without --force", () => {
     const root = setup();
     // Pre-create a skill file with custom content
-    mkdirSync(join(root, ".claude/skills"), { recursive: true });
-    writeFileSync(join(root, ".claude/skills/check-spec.md"), "custom content");
+    mkdirSync(join(root, ".claude/skills/check-spec"), { recursive: true });
+    writeFileSync(join(root, ".claude/skills/check-spec/SKILL.md"), "custom content");
 
     init(root, { skillsOnly: false, hooksOnly: false, force: false });
 
-    const content = readFileSync(join(root, ".claude/skills/check-spec.md"), "utf-8");
+    const content = readFileSync(join(root, ".claude/skills/check-spec/SKILL.md"), "utf-8");
     expect(content).toBe("custom content");
   });
 
   it("overwrites existing files with --force and creates backups", () => {
     const root = setup();
     // Pre-create a skill file with custom content
-    mkdirSync(join(root, ".claude/skills"), { recursive: true });
-    writeFileSync(join(root, ".claude/skills/check-spec.md"), "custom content");
+    mkdirSync(join(root, ".claude/skills/check-spec"), { recursive: true });
+    writeFileSync(join(root, ".claude/skills/check-spec/SKILL.md"), "custom content");
 
     init(root, { skillsOnly: false, hooksOnly: false, force: true });
 
-    const content = readFileSync(join(root, ".claude/skills/check-spec.md"), "utf-8");
+    const content = readFileSync(join(root, ".claude/skills/check-spec/SKILL.md"), "utf-8");
     expect(content).not.toBe("custom content");
     expect(content).toContain("name: check-spec");
 
     // Backup should exist
-    const backupPath = join(root, ".spec-guard/backups/.claude__skills__check-spec.md");
+    const backupPath = join(root, ".spec-guard/backups/.claude__skills__check-spec__SKILL.md");
     expect(existsSync(backupPath)).toBe(true);
     const backupContent = readFileSync(backupPath, "utf-8");
     expect(backupContent).toBe("custom content");

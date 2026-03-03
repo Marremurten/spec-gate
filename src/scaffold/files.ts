@@ -25,12 +25,12 @@ function readTemplate(name: string): string {
 export function getScaffoldFiles(): ScaffoldFile[] {
   return [
     {
-      target: ".claude/skills/check-spec.md",
+      target: ".claude/skills/check-spec/SKILL.md",
       content: readTemplate("check-spec.md"),
       category: "skill",
     },
     {
-      target: ".claude/skills/check-diff.md",
+      target: ".claude/skills/check-diff/SKILL.md",
       content: readTemplate("check-diff.md"),
       category: "skill",
     },
