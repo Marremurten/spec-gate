@@ -23,29 +23,32 @@ The root cause: most specs are under-specified. They leave room for interpretati
 spec-gate adds two validation gates around your implementation:
 
 ```
-  /check-spec           implement           /check-diff
-  ┌─────────┐          ┌─────────┐         ┌──────────┐
-  │ Score    │          │         │         │ Score     │
-  │ spec for │───────►  │  Code   │───────► │ diff for  │
-  │ gaps     │ contract │         │         │ compliance│
-  └─────────┘          └─────────┘         └──────────┘
-       ▲                    │                    │
-       │                    ▼                    │
-       │              /check-determinism         │
-       │              ┌──────────────┐           │
-       │              │ Run spec 2x  │           │
-       │              │ Compare real │           │
-       │              │ outputs      │           │
-       │              └──────────────┘           │
-       │                                         │
-       │         learnings.json                  │
-       └─────────────────────────────────────────┘
-                 self-improving loop
+  /check-spec                implement              /check-diff
+  ┌──────────────┐          ┌─────────┐           ┌──────────┐
+  │ Detect type  │          │         │           │ Score     │
+  │ (frontend,   │          │         │           │ diff for  │
+  │  backend...) │          │  Code   │──────────►│ compliance│
+  │      │       │ contract │         │           │ (type-    │
+  │ Score spec   │─────────►│         │           │  aware)   │
+  │ (domain-     │          └─────────┘           └──────────┘
+  │  specific)   │               │                      │
+  └──────────────┘               │                      │
+       ▲                         ▼                      │
+       │              /check-determinism                │
+       │              ┌──────────────┐                  │
+       │              │ Run spec 2x  │                  │
+       │              │ Compare real │                  │
+       │              │ outputs      │                  │
+       │              └──────────────┘                  │
+       │                     │                          │
+       │              learnings.json                    │
+       └───────────────────────────────────────────────┘
+                    self-improving loop
 ```
 
-**Gate 1 (`/check-spec`)** — Before you implement, scores your spec on 5 determinism signals. If it scores low, asks targeted questions to fill the gaps. Outputs a contract that defines exactly what should change.
+**Gate 1 (`/check-spec`)** — Detects the spec type (frontend, backend, infra, data, ux, fullstack) and scores 5 determinism signals using domain-specific checklists. If the score is low, asks targeted refinement questions tuned to the spec type. Outputs a contract.
 
-**Gate 2 (`/check-diff`)** — After you implement, compares the actual diff against the contract. Catches scope creep, missing files, boundary violations, and decision divergence. Writes learnings that make Gate 1 smarter next time.
+**Gate 2 (`/check-diff`)** — Compares the actual diff against the contract using type-aware decision verification. Catches scope creep, missing files, boundary violations, and decision divergence. Writes learnings that make Gate 1 smarter next time.
 
 ## Quick start
 
