@@ -38,7 +38,7 @@ Keep this context for Step 5 (refinement questions). Do NOT output this research
 
 Identify which workflow produced this spec:
 - **GSD** → `.planning/phase-N/PLAN.md` format with tasks/waves
-- **Plan mode** → Claude Code plan mode output
+- **Plan mode** → Claude Code plan mode output (detailed plan with steps, usually written to a plan file)
 - **spec-kit** → `.spec-kit/` directory structure
 - **Raw prompt** → a short instruction without structure
 - **Custom** → any other format
@@ -68,7 +68,7 @@ Calculate: `determinism_score = round((raw_total / 20) * 10)` where `raw_total =
 
 ### If score >= 8: Generate contract directly
 
-Skip to **Step 7** (generate contract) using the spec as-is. Print the report from **Step 6** first.
+Skip to **Step 7** (print report) using the spec as-is.
 
 ### If score < 8: Interactive refinement
 
@@ -118,6 +118,10 @@ Then **re-score** the refined spec using the same 5 signals. Print both scores:
 ```
 
 If the refined score is still < 8, note which signals remain weak but proceed anyway — don't loop forever.
+
+### Save the refined spec to disk
+
+Write the refined spec to `.spec-guard/refined-spec.md` so it persists across sessions and can be used as input for plan mode or other workflows. This file is the source of truth for what was agreed upon.
 
 ## Step 7: Print report
 
@@ -189,19 +193,32 @@ Written to `.spec-guard/contract.json`
 - Acceptance criteria: N items
 ```
 
-## Step 9: Handoff to implementation
+## Step 9: Handoff — what to do next
 
-After printing the contract summary, ask the user what to do next:
+After printing the contract summary, ask the user how they want to proceed.
 
 Use AskUserQuestion with these options:
 
-- **"Implement now"** — Proceed immediately. Use the refined spec (or original if no refinement) as your implementation guide. Follow the file boundaries, acceptance criteria, and decisions exactly. After implementation, suggest the user run `/check-diff` to validate.
-- **"Show spec to copy"** — Print the refined spec as a clean markdown block the user can copy and use as a prompt in a new session or with another tool.
-- **"Done for now"** — Stop. The contract is saved and the user can implement later or in a new session. Remind them the contract is at `.spec-guard/contract.json` and they can run `/check-diff` after implementing.
+- **"Implement now"** — Proceed to implement immediately using the refined spec as your guide. Follow the file boundaries, acceptance criteria, and decisions exactly. Only touch files listed in `expected_files`. After implementation, print: `Spec Guard: Implementation complete. Run /check-diff to validate.`
+- **"Plan first, then implement"** — Enter plan mode to design a detailed implementation approach based on the refined spec. Read `.spec-guard/refined-spec.md` as the requirements. The plan should respect the file boundaries and acceptance criteria from the contract. After the plan is approved and implemented, suggest `/check-diff`.
+- **"Done for now"** — Stop. Remind the user:
+  - Refined spec saved to `.spec-guard/refined-spec.md`
+  - Contract saved to `.spec-guard/contract.json`
+  - To implement later: "Implement the spec in `.spec-guard/refined-spec.md`" or start a new session and reference the file
+  - After implementing, run `/check-diff` to validate
 
-If the user chose "Implement now":
-1. Implement the changes described in the refined spec, following file boundaries strictly
-2. Only touch files listed in `expected_files`
-3. After implementation, print: `Spec Guard: Implementation complete. Run /check-diff to validate.`
+### Plan mode integration notes
+
+When the user chooses "Plan first, then implement":
+1. Call the EnterPlanMode tool to switch to plan mode
+2. In plan mode, use the refined spec from `.spec-guard/refined-spec.md` as the requirements — do NOT re-ask the questions that were already resolved during refinement
+3. The plan should add implementation detail (component structure, exact code patterns, ordering) but must stay within the boundaries and scope of the refined spec
+4. If the plan needs to expand beyond the contract boundaries (e.g., touching additional files), note this explicitly so the contract can be updated before implementation
+5. After the user approves the plan and implementation completes, suggest `/check-diff`
+
+When `/check-spec` is run on an existing plan (e.g., `/check-spec ./some-plan.md`):
+- Score the plan like any other spec — plans from plan mode usually score 7-9/10
+- If score >= 8, generate the contract directly with no refinement needed
+- If score < 8, the refinement questions focus on what the plan is missing (usually negative space or acceptance criteria)
 
 **Important:** This is always advisory. Never block the user or suggest they cannot proceed. If they want to skip refinement, that's fine — generate the contract from whatever information is available.
