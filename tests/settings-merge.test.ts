@@ -1,0 +1,173 @@
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { mergeSettings, removeFromSettings } from "../src/scaffold/settings-merge.js";
+
+const TEST_DIR = join(import.meta.dirname, ".tmp-settings-test");
+
+function setup(settings?: object): string {
+  rmSync(TEST_DIR, { recursive: true, force: true });
+  mkdirSync(TEST_DIR, { recursive: true });
+  if (settings !== undefined) {
+    const claudeDir = join(TEST_DIR, ".claude");
+    mkdirSync(claudeDir, { recursive: true });
+    writeFileSync(
+      join(claudeDir, "settings.json"),
+      JSON.stringify(settings, null, 2),
+    );
+  }
+  return TEST_DIR;
+}
+
+function readSettings(root: string): Record<string, unknown> {
+  const raw = readFileSync(join(root, ".claude", "settings.json"), "utf-8");
+  return JSON.parse(raw);
+}
+
+describe("settings-merge", () => {
+  afterEach(() => {
+    rmSync(TEST_DIR, { recursive: true, force: true });
+  });
+
+  describe("mergeSettings", () => {
+    it("creates settings.json when missing", () => {
+      const root = setup();
+      const { merged } = mergeSettings(root);
+
+      expect(merged).toBe(true);
+      const settings = readSettings(root);
+      expect(settings.hooks).toBeDefined();
+      const hooks = settings.hooks as Record<string, unknown[]>;
+      expect(hooks.Stop).toHaveLength(1);
+      expect(hooks.Stop[0]).toEqual({
+        type: "agent",
+        agent: "spec-guard-validator",
+      });
+    });
+
+    it("merges into empty settings", () => {
+      const root = setup({});
+      const { merged } = mergeSettings(root);
+
+      expect(merged).toBe(true);
+      const settings = readSettings(root);
+      const hooks = settings.hooks as Record<string, unknown[]>;
+      expect(hooks.Stop).toHaveLength(1);
+    });
+
+    it("preserves existing hooks and non-hook keys", () => {
+      const root = setup({
+        permissions: { allow: ["Read"] },
+        hooks: {
+          Stop: [{ type: "command", command: "echo done" }],
+          PreToolUse: [{ type: "command", command: "echo pre" }],
+        },
+      });
+
+      const { merged } = mergeSettings(root);
+
+      expect(merged).toBe(true);
+      const settings = readSettings(root);
+      expect(settings.permissions).toEqual({ allow: ["Read"] });
+      const hooks = settings.hooks as Record<string, unknown[]>;
+      expect(hooks.Stop).toHaveLength(2);
+      expect(hooks.Stop[0]).toEqual({ type: "command", command: "echo done" });
+      expect(hooks.Stop[1]).toEqual({ type: "agent", agent: "spec-guard-validator" });
+      expect(hooks.PreToolUse).toHaveLength(1);
+    });
+
+    it("is idempotent — no duplicates on re-run", () => {
+      const root = setup({});
+
+      mergeSettings(root);
+      const { merged } = mergeSettings(root);
+
+      expect(merged).toBe(false);
+      const settings = readSettings(root);
+      const hooks = settings.hooks as Record<string, unknown[]>;
+      expect(hooks.Stop).toHaveLength(1);
+    });
+
+    it("detects existing spec-guard hook by agent name", () => {
+      const root = setup({
+        hooks: {
+          Stop: [{ type: "agent", agent: "spec-guard-validator" }],
+        },
+      });
+
+      const { merged } = mergeSettings(root);
+      expect(merged).toBe(false);
+    });
+
+    it("detects existing spec-guard hook by prompt content", () => {
+      const root = setup({
+        hooks: {
+          Stop: [{ type: "prompt", prompt: "Run spec-guard check" }],
+        },
+      });
+
+      const { merged } = mergeSettings(root);
+      expect(merged).toBe(false);
+    });
+
+    it("creates backup before modifying", () => {
+      const root = setup({ existing: true });
+      const { backupPath } = mergeSettings(root);
+
+      expect(backupPath).toBe(".spec-guard/backups/settings.json.bak");
+      expect(existsSync(join(root, ".spec-guard", "backups", "settings.json.bak"))).toBe(true);
+    });
+  });
+
+  describe("removeFromSettings", () => {
+    it("removes spec-guard hook entries", () => {
+      const root = setup({
+        hooks: {
+          Stop: [
+            { type: "command", command: "echo done" },
+            { type: "agent", agent: "spec-guard-validator" },
+          ],
+        },
+      });
+
+      const { removed } = removeFromSettings(root);
+
+      expect(removed).toBe(true);
+      const settings = readSettings(root);
+      const hooks = settings.hooks as Record<string, unknown[]>;
+      expect(hooks.Stop).toHaveLength(1);
+      expect(hooks.Stop[0]).toEqual({ type: "command", command: "echo done" });
+    });
+
+    it("cleans up empty Stop array and hooks object", () => {
+      const root = setup({
+        hooks: {
+          Stop: [{ type: "agent", agent: "spec-guard-validator" }],
+        },
+      });
+
+      const { removed } = removeFromSettings(root);
+
+      expect(removed).toBe(true);
+      const settings = readSettings(root);
+      expect(settings.hooks).toBeUndefined();
+    });
+
+    it("returns removed=false when no spec-guard hooks exist", () => {
+      const root = setup({
+        hooks: {
+          Stop: [{ type: "command", command: "echo done" }],
+        },
+      });
+
+      const { removed } = removeFromSettings(root);
+      expect(removed).toBe(false);
+    });
+
+    it("returns removed=false when settings.json is missing", () => {
+      const root = setup();
+      const { removed } = removeFromSettings(root);
+      expect(removed).toBe(false);
+    });
+  });
+});

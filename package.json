@@ -1,0 +1,29 @@
+{
+  "name": "spec-guard",
+  "version": "0.1.0",
+  "description": "AI spec validation for Claude Code — determinism scoring and diff contract checking",
+  "type": "module",
+  "bin": {
+    "spec-guard": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "claude-code",
+    "ai",
+    "spec",
+    "validation",
+    "determinism"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^2.0.0"
+  }
+}

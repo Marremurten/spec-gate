@@ -1,0 +1,19 @@
+{
+  "specSources": [
+    { "pattern": ".planning/phase-*/PLAN.md", "workflow": "gsd" },
+    { "pattern": ".planning/**/PLAN.md", "workflow": "gsd" },
+    { "pattern": ".spec-kit/**/*.md", "workflow": "spec-kit" }
+  ],
+  "ignoredPaths": [
+    "package-lock.json",
+    "yarn.lock",
+    "pnpm-lock.yaml",
+    "*.snap",
+    ".env*",
+    "*.generated.*"
+  ],
+  "boundaries": {
+    "defaultMaxFiles": 20,
+    "defaultMaxLinesAdded": 1000
+  }
+}
