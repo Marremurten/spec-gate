@@ -28,7 +28,7 @@ export function init(projectRoot: string, options: InitOptions): void {
 
   const results = writeScaffoldFiles(projectRoot, files, options.force);
 
-  console.log("\n  spec-guard init\n");
+  console.log("\n  spec-gate init\n");
 
   for (const result of results) {
     const icon = result.action === "created" ? "+" : result.action === "skipped" ? "-" : "~";

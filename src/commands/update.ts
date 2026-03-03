@@ -5,17 +5,17 @@ import { writeScaffoldFiles } from "../scaffold/writer.js";
 import { mergeSettings } from "../scaffold/settings-merge.js";
 
 export function update(projectRoot: string): void {
-  const configPath = join(projectRoot, ".spec-guard.json");
+  const configPath = join(projectRoot, ".spec-gate.json");
 
   if (!existsSync(configPath)) {
-    console.error("\n  Error: .spec-guard.json not found. Run `spec-guard init` first.\n");
+    console.error("\n  Error: .spec-gate.json not found. Run `spec-gate init` first.\n");
     process.exit(1);
   }
 
   const files = getScaffoldFiles();
   const results = writeScaffoldFiles(projectRoot, files, true);
 
-  console.log("\n  spec-guard update\n");
+  console.log("\n  spec-gate update\n");
 
   for (const result of results) {
     const icon = result.action === "overwritten" ? "~" : "+";
@@ -31,5 +31,5 @@ export function update(projectRoot: string): void {
     console.log(`  - .claude/settings.json [hook already present]`);
   }
 
-  console.log("\n  Updated to latest spec-guard templates.\n");
+  console.log("\n  Updated to latest spec-gate templates.\n");
 }

@@ -11,12 +11,12 @@ function hasFlag(flag: string): boolean {
 
 function printUsage(): void {
   console.log(`
-  spec-guard — AI spec validation for Claude Code
+  spec-gate — AI spec validation for Claude Code
 
   Usage:
-    spec-guard init [options]    Scaffold spec-guard files into your project
-    spec-guard update            Update scaffold files to latest version
-    spec-guard remove [options]  Remove all spec-guard files
+    spec-gate init [options]    Scaffold spec-gate files into your project
+    spec-gate update            Update scaffold files to latest version
+    spec-gate remove [options]  Remove all spec-gate files
 
   Init options:
     --skills-only   Only install skill files (no hooks/agent)
@@ -24,7 +24,7 @@ function printUsage(): void {
     --force         Overwrite existing files (backs up originals)
 
   Remove options:
-    --data          Also remove .spec-guard/ directory (contracts, backups)
+    --data          Also remove .spec-gate/ directory (contracts, backups)
   `);
 }
 

@@ -1,11 +1,11 @@
-# spec-guard
+# spec-gate
 
 **Stop AI agents from interpreting your specs differently every time.**
 
-spec-guard is a validation system for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) that ensures AI specs produce consistent, predictable output. It scores specs before implementation, validates diffs after, and learns from every cycle to get better over time.
+spec-gate is a validation system for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) that ensures AI specs produce consistent, predictable output. It scores specs before implementation, validates diffs after, and learns from every cycle to get better over time.
 
 ```
-npx spec-guard init
+npx spec-gate init
 ```
 
 Zero runtime dependencies. Zero config required. Works with any Claude Code workflow.
@@ -18,9 +18,9 @@ You write a spec. You give it to an AI agent. It builds something. You give the 
 
 The root cause: most specs are under-specified. They leave room for interpretation, and every agent interprets differently. "Add auth" could mean JWT or sessions or OAuth. "Update the frontend" could touch 2 files or 20.
 
-## How spec-guard fixes it
+## How spec-gate fixes it
 
-spec-guard adds two validation gates around your implementation:
+spec-gate adds two validation gates around your implementation:
 
 ```
   /check-spec           implement           /check-diff
@@ -45,11 +45,11 @@ spec-guard adds two validation gates around your implementation:
 
 ```bash
 # Scaffold into your project (creates Claude Code skills, agent, and config)
-npx spec-guard init
+npx spec-gate init
 
 # Or install globally
-npm i -g spec-guard
-spec-guard init
+npm i -g spec-gate
+spec-gate init
 ```
 
 This creates:
@@ -57,9 +57,9 @@ This creates:
 .claude/skills/check-spec/SKILL.md         # /check-spec command
 .claude/skills/check-diff/SKILL.md         # /check-diff command
 .claude/skills/check-determinism/SKILL.md  # /check-determinism command
-.claude/agents/spec-guard-validator.md     # Stop hook agent
+.claude/agents/spec-gate-validator.md     # Stop hook agent
 .claude/settings.json                      # Hook registration
-.spec-guard.json                           # Config
+.spec-gate.json                           # Config
 ```
 
 ### Use
@@ -100,8 +100,8 @@ Scores a spec on 5 weighted determinism signals:
 > *"The nav bar is in `src/app/layout.tsx`. Should the logo replace the 'Job Finder' text on line 21, or go to the left of it?"*
 
 After refinement, outputs:
-- **Refined spec** → `.spec-guard/refined-spec.md`
-- **Contract** → `.spec-guard/contract.json`
+- **Refined spec** → `.spec-gate/refined-spec.md`
+- **Contract** → `.spec-gate/contract.json`
 - **Test suggestions** → derived from acceptance criteria
 
 Then offers: **Implement now** | **Plan first** | **Done for now**
@@ -136,7 +136,7 @@ This is expensive (two full implementations) so it's opt-in. Use it when you wan
 
 ## Self-improving loop
 
-The core innovation. Every `/check-diff` run writes learnings to `.spec-guard/learnings.json`:
+The core innovation. Every `/check-diff` run writes learnings to `.spec-gate/learnings.json`:
 
 **File coupling rules** — Project-specific patterns like "changing `prisma/schema.prisma` also requires `prisma/migrations/`". Next time `/check-spec` sees a spec that touches the schema but doesn't mention migrations, it lowers the file boundaries score and asks the user about it.
 
@@ -162,7 +162,7 @@ The system gets better the more you use it on a project.
 
 ## Works with any workflow
 
-spec-guard auto-detects what produced the spec:
+spec-gate auto-detects what produced the spec:
 
 | Workflow | How to use |
 |----------|-----------|
@@ -174,7 +174,7 @@ spec-guard auto-detects what produced the spec:
 
 ## Configuration
 
-`.spec-guard.json` (created by `init`, all fields optional):
+`.spec-gate.json` (created by `init`, all fields optional):
 
 ```json
 {
@@ -196,13 +196,13 @@ spec-guard auto-detects what produced the spec:
 ## CLI commands
 
 ```bash
-spec-guard init              # Scaffold skills, agent, hook, config
-spec-guard init --skills-only  # Only install skills and config (no hook)
-spec-guard init --hooks-only   # Only install agent and hook
-spec-guard init --force        # Overwrite existing files (creates backups)
-spec-guard update            # Update to latest templates (keeps config)
-spec-guard remove            # Remove all spec-guard files
-spec-guard remove --data     # Also remove .spec-guard/ directory
+spec-gate init              # Scaffold skills, agent, hook, config
+spec-gate init --skills-only  # Only install skills and config (no hook)
+spec-gate init --hooks-only   # Only install agent and hook
+spec-gate init --force        # Overwrite existing files (creates backups)
+spec-gate update            # Update to latest templates (keeps config)
+spec-gate remove            # Remove all spec-gate files
+spec-gate remove --data     # Also remove .spec-gate/ directory
 ```
 
 ## File overview
@@ -214,14 +214,14 @@ After `init`, these files exist in your project:
 | `.claude/skills/check-spec/SKILL.md` | Gate 1 skill | Yes |
 | `.claude/skills/check-diff/SKILL.md` | Gate 2 skill | Yes |
 | `.claude/skills/check-determinism/SKILL.md` | Determinism test skill | Yes |
-| `.claude/agents/spec-guard-validator.md` | Stop hook agent | Yes |
+| `.claude/agents/spec-gate-validator.md` | Stop hook agent | Yes |
 | `.claude/settings.json` | Hook registration | Yes |
-| `.spec-guard.json` | Configuration | Yes |
-| `.spec-guard/contract.json` | Current contract | No* |
-| `.spec-guard/refined-spec.md` | Current refined spec | No* |
-| `.spec-guard/learnings.json` | Cross-session learnings | No* |
+| `.spec-gate.json` | Configuration | Yes |
+| `.spec-gate/contract.json` | Current contract | No* |
+| `.spec-gate/refined-spec.md` | Current refined spec | No* |
+| `.spec-gate/learnings.json` | Cross-session learnings | No* |
 
-*The `.spec-guard/` directory is session-specific. Add it to `.gitignore` or commit it — your choice. Learnings are more valuable if committed (shared across team members).
+*The `.spec-gate/` directory is session-specific. Add it to `.gitignore` or commit it — your choice. Learnings are more valuable if committed (shared across team members).
 
 ## Design principles
 

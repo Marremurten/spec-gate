@@ -1,26 +1,41 @@
 {
-  "name": "spec-guard",
+  "name": "spec-gate",
   "version": "0.1.0",
   "description": "AI spec validation for Claude Code — determinism scoring and diff contract checking",
   "type": "module",
   "bin": {
-    "spec-guard": "./dist/index.js"
+    "spec-gate": "./dist/index.js"
   },
   "files": [
     "dist"
   ],
   "scripts": {
     "build": "tsup",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepublishOnly": "npm run build && npm test"
   },
   "keywords": [
     "claude-code",
     "ai",
     "spec",
     "validation",
-    "determinism"
+    "determinism",
+    "spec-gate",
+    "anthropic"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Marremurten/spec-gate.git"
+  },
+  "homepage": "https://github.com/Marremurten/spec-gate",
+  "bugs": {
+    "url": "https://github.com/Marremurten/spec-gate/issues"
+  },
+  "author": "Martin Nordlund",
   "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
   "devDependencies": {
     "tsup": "^8.0.0",
     "typescript": "^5.4.0",

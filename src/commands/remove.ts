@@ -7,7 +7,7 @@ export function remove(projectRoot: string, removeData: boolean): void {
   const files = getScaffoldFiles();
   const dirsToClean = new Set<string>();
 
-  console.log("\n  spec-guard remove\n");
+  console.log("\n  spec-gate remove\n");
 
   for (const file of files) {
     const fullPath = join(projectRoot, file.target);
@@ -43,10 +43,10 @@ export function remove(projectRoot: string, removeData: boolean): void {
   }
 
   if (removeData) {
-    const specGuardDir = join(projectRoot, ".spec-guard");
+    const specGuardDir = join(projectRoot, ".spec-gate");
     if (existsSync(specGuardDir)) {
       rmSync(specGuardDir, { recursive: true });
-      console.log(`  - .spec-guard/ [deleted]`);
+      console.log(`  - .spec-gate/ [deleted]`);
     }
   }
 
