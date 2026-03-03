@@ -36,9 +36,9 @@ spec-gate adds two validation gates around your implementation:
        ▲              ▼                                 │
        │    /check-determinism                          │
        │    ┌──────────────┐                            │
-       │    │ Run spec 2x  │                            │
-       │    │ before build │                            │
-       │    │ to prove it  │                            │
+       │    │ 2 agents     │                            │
+       │    │ same spec    │                            │
+       │    │ compare      │                            │
        │    └──────────────┘                            │
        │              │                                 │
        │        learnings.json                          │
@@ -82,7 +82,8 @@ In Claude Code:
 /check-spec add JWT auth to the login endpoint
 
 # Optional — prove the spec is deterministic before you build
-/check-determinism
+/check-determinism          # light mode (fast, outlines only)
+/check-determinism --full   # full mode (two real implementations)
 
 # After implementing — validate the diff
 /check-diff
@@ -133,17 +134,21 @@ Decision verification is the key differentiator — it doesn't just check *which
 
 Uses the contract timestamp to scope the diff, filtering out pre-existing uncommitted changes.
 
-### `/check-determinism`
+### `/check-determinism [--full]`
 
-The ultimate validation. Runs the same spec through **two independent agents in isolated worktrees** and compares their outputs:
+Tests whether two independent agents would interpret the spec the same way. Run this **before implementing** — it validates the spec itself, not your implementation.
 
-- Creates two git worktrees
-- Gives each agent the identical spec with zero additional context
-- Diffs the two implementations line-by-line
-- Reports actual determinism: file overlap, content similarity, decision consistency
-- Compares predicted score (from `/check-spec`) against actual results
+**Light mode (default)** — two agents produce detailed implementation outlines (file lists, imports, key decisions, function signatures, critical code lines) without writing real code. Compares their outlines to find ambiguity. Fast and cheap.
 
-Run this **before implementing** — it validates the spec itself, not your implementation. This is expensive (two full implementations) so it's opt-in. Use it when you want proof that a critical spec is tight enough before you commit to building it.
+**Full mode (`--full`)** — two agents implement the spec for real in isolated git worktrees. Diffs their actual code line-by-line. Definitive but expensive (two full implementations).
+
+Both modes:
+- Give each agent the identical spec with zero additional context
+- Report actual determinism: file/import agreement, decision consistency, structural match
+- Compare predicted score (from `/check-spec`) against actual results
+- Write divergence patterns to learnings so `/check-spec` gets smarter
+
+Use light mode to quickly spot ambiguity during spec refinement. Use full mode when you need proof that a critical spec truly produces identical code.
 
 ## Self-improving loop
 
