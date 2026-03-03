@@ -48,6 +48,8 @@ spec-gate adds two validation gates around your implementation:
 
 **Gate 1 (`/check-spec`)** — Detects the spec type (frontend, backend, infra, data, ux, fullstack) and scores 5 determinism signals using domain-specific checklists. If the score is low, asks targeted refinement questions tuned to the spec type. Outputs a contract.
 
+**Optional: `/check-determinism`** — Proves the spec is deterministic by having two agents interpret it independently. Light mode compares outlines; full mode compares real code.
+
 **Gate 2 (`/check-diff`)** — Compares the actual diff against the contract using type-aware decision verification. Catches scope creep, missing files, boundary violations, and decision divergence. Writes learnings that make Gate 1 smarter next time.
 
 ## Quick start
