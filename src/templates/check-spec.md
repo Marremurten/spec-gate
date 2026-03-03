@@ -189,4 +189,19 @@ Written to `.spec-guard/contract.json`
 - Acceptance criteria: N items
 ```
 
+## Step 9: Handoff to implementation
+
+After printing the contract summary, ask the user what to do next:
+
+Use AskUserQuestion with these options:
+
+- **"Implement now"** — Proceed immediately. Use the refined spec (or original if no refinement) as your implementation guide. Follow the file boundaries, acceptance criteria, and decisions exactly. After implementation, suggest the user run `/check-diff` to validate.
+- **"Show spec to copy"** — Print the refined spec as a clean markdown block the user can copy and use as a prompt in a new session or with another tool.
+- **"Done for now"** — Stop. The contract is saved and the user can implement later or in a new session. Remind them the contract is at `.spec-guard/contract.json` and they can run `/check-diff` after implementing.
+
+If the user chose "Implement now":
+1. Implement the changes described in the refined spec, following file boundaries strictly
+2. Only touch files listed in `expected_files`
+3. After implementation, print: `Spec Guard: Implementation complete. Run /check-diff to validate.`
+
 **Important:** This is always advisory. Never block the user or suggest they cannot proceed. If they want to skip refinement, that's fine — generate the contract from whatever information is available.
