@@ -34,7 +34,30 @@ Before scoring, understand the relevant parts of the codebase so you can ask inf
 
 Keep this context for Step 5 (refinement questions). Do NOT output this research to the user.
 
-## Step 3: Detect workflow
+## Step 3: Load learnings from previous sessions
+
+Read `.spec-guard/learnings.json` if it exists. This file contains lessons learned from previous `/check-diff` runs — patterns where specs scored high but implementations diverged.
+
+Extract three things:
+
+### 3a: File coupling rules
+These are project-specific patterns like "changing X also requires changing Y". When scoring file boundaries in Step 4, check if the spec mentions a trigger file but misses its coupled files.
+
+For example, if learnings contain:
+```json
+{ "trigger": "prisma/schema.prisma", "also_requires": ["prisma/migrations/"], "times_seen": 3 }
+```
+And the spec says "Modify: prisma/schema.prisma" but doesn't mention migrations → the file boundaries signal cannot score 2.
+
+### 3b: Scoring notes
+If a signal has been over-scored multiple times, apply stricter scoring. For example, if `file_boundaries` has `times_over_scored: 3`, require more explicit file listings to score a 2 — vague references like "and related files" should score 0 instead of 1.
+
+### 3c: Past lessons
+Review the lessons log for patterns relevant to the current spec. If previous specs in the same area (same files, same domain) had compliance issues, proactively flag them during refinement.
+
+**Do NOT output learnings to the user during this step.** Use them silently to inform scoring and refinement questions.
+
+## Step 4: Detect workflow
 
 Identify which workflow produced this spec:
 - **GSD** → `.planning/phase-N/PLAN.md` format with tasks/waves
@@ -45,7 +68,7 @@ Identify which workflow produced this spec:
 
 Record this for the contract.
 
-## Step 4: Score 5 determinism signals
+## Step 5: Score 5 determinism signals
 
 Evaluate each signal on a 0–2 scale:
 
@@ -62,29 +85,37 @@ Evaluate each signal on a 0–2 scale:
 - Score each signal independently.
 - A signal at 0 means the spec literally does not address it.
 
+**Apply learnings during scoring:**
+- **File boundaries:** If the spec lists files but learnings have file coupling rules for those files, check if the coupled files are also listed. If not, cap the score at 1 and note why.
+- **Negative space:** If learnings show that agents tend to scope-creep in certain areas for similar specs, require explicit exclusions for those areas to score 2.
+- **Scope:** If learnings show that similar changes tend to be larger than expected, require more detailed scope description to score 2.
+
+If learnings affected any score, note it in the assessment column: "Scored 1/2 (learnings: prisma changes require migrations, not listed)"
+
 Calculate: `determinism_score = round((raw_total / 20) * 10)` where `raw_total = sum of (score × weight)`, max raw = 20.
 
-## Step 5: Branch based on score
+## Step 6: Branch based on score
 
 ### If score >= 8: Generate contract directly
 
-Skip to **Step 7** (print report) using the spec as-is.
+Skip to **Step 8** (print report) using the spec as-is.
 
 ### If score < 8: Interactive refinement
 
 **Do NOT just list suggestions. Ask the user targeted questions to fill the gaps.**
 
-For each signal that scored below 2, generate 1-2 specific questions informed by the codebase context you gathered in Step 2. Questions must be:
+For each signal that scored below 2, generate 1-2 specific questions informed by the codebase context you gathered in Step 2 **and the learnings from Step 3**. Questions must be:
 
 - **Concrete, not abstract.** Bad: "What files should change?" Good: "The nav bar is in `src/app/layout.tsx`. Should the logo go to the left of the 'Job Finder' text link on line 21, or replace it entirely?"
 - **Offer options when possible.** Use the AskUserQuestion tool with concrete choices derived from the codebase. For example, if the user says "add a logo", offer: "SVG inline in the component" vs "Image file in /public/" vs "Use next/image with an asset".
 - **Scoped to what's missing.** Don't ask about signals that already scored 2.
+- **Informed by learnings.** If learnings flagged a file coupling rule (e.g., "changing schema.prisma also needs migrations"), include this in the question: "Past changes to `prisma/schema.prisma` also required a migration file. Should this spec include a migration?"
 
 Ask all questions in a **single AskUserQuestion call** (up to 4 questions). Group related signals if needed to stay within the limit. Make the options specific to the actual codebase — reference real file paths, existing patterns, and component names.
 
-After the user answers, proceed to **Step 6**.
+After the user answers, proceed to **Step 7**.
 
-## Step 6: Synthesize refined spec
+## Step 7: Synthesize refined spec
 
 Using the original spec plus the user's answers, produce a **refined spec block**. Format it as:
 
@@ -111,7 +142,7 @@ Using the original spec plus the user's answers, produce a **refined spec block*
 - <resolved technical choices>
 ```
 
-Then **re-score** the refined spec using the same 5 signals. Print both scores:
+Then **re-score** the refined spec using the same 5 signals (with learnings applied). Print both scores:
 
 ```
 **Original score:** N/10 → **Refined score:** N/10
@@ -123,7 +154,7 @@ If the refined score is still < 8, note which signals remain weak but proceed an
 
 Write the refined spec to `.spec-guard/refined-spec.md` so it persists across sessions and can be used as input for plan mode or other workflows. This file is the source of truth for what was agreed upon.
 
-## Step 7: Print report
+## Step 8: Print report
 
 Format your output as:
 
@@ -133,11 +164,12 @@ Format your output as:
 **Spec:** <path or "conversation context">
 **Workflow:** <detected workflow>
 **Score:** <N>/10 <if refined: "(refined from N/10)">
+<if learnings applied: "**Learnings applied:** N rules from N previous sessions">
 
 | Signal | Score | Weight | Weighted | Assessment |
 |--------|-------|--------|----------|------------|
 | Scope | N/2 | ×3 | N/6 | <one-line reasoning> |
-| File boundaries | N/2 | ×2 | N/4 | <one-line reasoning> |
+| File boundaries | N/2 | ×2 | N/4 | <one-line reasoning, include learnings note if applicable> |
 | Acceptance criteria | N/2 | ×2 | N/4 | <one-line reasoning> |
 | Negative space | N/2 | ×2 | N/4 | <one-line reasoning> |
 | Decisions resolved | N/2 | ×1 | N/2 | <one-line reasoning> |
@@ -145,7 +177,7 @@ Format your output as:
 **Raw total:** N/20 → **Score: N/10**
 ```
 
-## Step 8: Generate contract
+## Step 9: Generate contract
 
 Create the directory `.spec-guard/` if it doesn't exist, then write `.spec-guard/contract.json`:
 
@@ -174,7 +206,8 @@ Create the directory `.spec-guard/` if it doesn't exist, then write `.spec-guard
     "acceptance_criteria": "<0-2>",
     "negative_space": "<0-2>",
     "decisions_resolved": "<0-2>"
-  }
+  },
+  "learnings_applied": "<number of rules applied, or 0>"
 }
 ```
 
@@ -191,9 +224,10 @@ Written to `.spec-guard/contract.json`
 - Expected files: N modify, N create, N delete
 - Boundaries: max N files, max N lines added
 - Acceptance criteria: N items
+- Learnings applied: N rules
 ```
 
-## Step 9: Handoff — what to do next
+## Step 10: Handoff — what to do next
 
 After printing the contract summary, ask the user how they want to proceed.
 

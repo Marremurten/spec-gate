@@ -23,6 +23,8 @@ ignoredPaths: ["package-lock.json", "yarn.lock", "pnpm-lock.yaml", "*.snap", ".e
 
 If `.spec-guard/refined-spec.md` exists, read it too — you'll need it for acceptance criteria verification.
 
+Read `.spec-guard/learnings.json` if it exists — you'll append new learnings in Step 8.
+
 ## Step 2: Get the diff
 
 The goal is to capture only the changes related to this contract, not unrelated work that existed before.
@@ -224,10 +226,103 @@ Write the compliance results back to `.spec-guard/contract.json` by adding these
 }
 ```
 
-Print:
+## Step 8: Write learnings
+
+This is what makes spec-guard self-improving across sessions. Update `.spec-guard/learnings.json` with what was learned from this compliance check.
+
+### 8a: Extract lessons
+
+For each compliance signal that scored below 2 (when the spec scored that signal at 2), create a lesson:
+
+- **Unexpected files** → extract a **file coupling rule**: "When file X changes, file Y usually also needs to change"
+  - Look at the scope creep files and the expected files. Is there a pattern? (e.g., changing a Prisma model always needs a migration, changing a route handler always needs a test update, changing a component always needs a CSS module update)
+  - Express as: `trigger_file → also_requires` pattern
+
+- **Boundaries exceeded** → extract a **size estimation rule**: "Changes to X tend to be larger than expected"
+  - Note how much the boundary was exceeded by
+
+- **Acceptance criteria missed** → extract a **criteria specificity rule**: "Criteria like 'X' are too vague to verify — need 'Y' instead"
+  - Note what was vague and what would have been testable
+
+- **Scope creep** → extract a **negative space rule**: "When doing X, agents also tend to do Y — explicitly exclude it"
+  - Note what the agent did that wasn't asked for
+
+### 8b: Build file coupling rules
+
+File coupling rules are the most valuable learning. They capture project-specific patterns like:
+- `prisma/schema.prisma` → `prisma/migrations/` (Prisma models need migrations)
+- `src/app/api/*/route.ts` → `tests/api/*.test.ts` (API routes need test updates)
+- `src/lib/schemas/*.ts` → `src/types/*.ts` (Zod schemas mirror TypeScript types)
+- `src/app/layout.tsx` → `src/app/globals.css` (layout changes often need style changes)
+
+To detect these, look at the scope creep files and check if they share a directory or naming pattern with the expected files.
+
+### 8c: Write to learnings.json
+
+Read the existing `.spec-guard/learnings.json` (or start fresh if it doesn't exist). Append new data:
+
+```json
+{
+  "version": "1",
+  "last_updated": "<ISO timestamp>",
+  "entries": [
+    {
+      "date": "<ISO timestamp>",
+      "spec_source": "<contract.created_from>",
+      "spec_score": N,
+      "compliance_score": N,
+      "gap": N,
+      "lessons": [
+        {
+          "signal": "file_boundaries",
+          "spec_scored": 2,
+          "should_have_been": 1,
+          "description": "Spec listed src/app/layout.tsx but implementation also needed src/app/globals.css"
+        }
+      ]
+    }
+  ],
+  "file_coupling_rules": [
+    {
+      "trigger": "prisma/schema.prisma",
+      "also_requires": ["prisma/migrations/"],
+      "description": "Prisma schema changes require a migration",
+      "times_seen": 1,
+      "first_seen": "<ISO>",
+      "last_seen": "<ISO>"
+    }
+  ],
+  "scoring_notes": [
+    {
+      "signal": "file_boundaries",
+      "note": "This project has tightly coupled files — be stricter when scoring file boundaries",
+      "times_over_scored": 1
+    }
+  ]
+}
 ```
-### Results saved
-Updated `.spec-guard/contract.json` with compliance results.
+
+**Rules for updating existing learnings:**
+- If a `file_coupling_rules` entry with the same `trigger` already exists, increment `times_seen` and update `last_seen`
+- If a `scoring_notes` entry for the same signal exists, increment `times_over_scored`
+- Never remove existing entries — only add or increment
+- Keep `entries` as an append-only log (max 20 entries, drop oldest if exceeded)
+
+### 8d: Print learnings summary
+
+```
+### Learnings saved
+Updated `.spec-guard/learnings.json`:
+- N new file coupling rules discovered
+- N existing rules reinforced
+- N scoring notes updated
+```
+
+If no learnings were extracted (both scores high), print:
+
+```
+### Learnings
+No new learnings — spec accurately predicted the implementation.
 ```
 
 **Important:** This is always advisory. Never block the user. Present findings neutrally — scope creep candidates may be legitimate, and compliance gaps are learning opportunities, not failures.
