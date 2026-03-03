@@ -77,9 +77,27 @@ Identify which workflow produced this spec:
 
 Record this for the contract.
 
+## Step 4b: Detect spec type
+
+Auto-detect the spec type from file paths and keywords in the spec:
+
+```
+Spec type: frontend | backend | infra | data | ux | fullstack
+```
+
+**Detection heuristics:**
+- `frontend` — File paths contain `src/app/`, `src/components/`, `src/pages/`, keywords: className, CSS, component, layout, page, UI, Tailwind, style
+- `backend` — File paths contain `src/api/`, `src/lib/`, `routes/`, `controllers/`, keywords: endpoint, API, route, handler, middleware, status code, request, response
+- `infra` — File paths contain `docker`, `terraform`, `.github/`, `deploy`, `.env`, keywords: CI/CD, pipeline, container, environment, config, secrets, deploy
+- `data` — File paths contain `prisma/`, `migrations/`, `schema`, keywords: schema, migration, model, seed, index, constraint
+- `ux` — Keywords: flow, state, transition, loading, error state, empty state, animation, user journey
+- `fullstack` — Mixed signals from multiple types above
+
+If ambiguous or signals come from multiple types, default to `fullstack`. Record the detected type in the contract.
+
 ## Step 5: Score 5 determinism signals
 
-Evaluate each signal on a 0–2 scale:
+Evaluate each signal on a 0–2 scale. Use the **detected spec type** from Step 4b to apply the domain-specific checklists below.
 
 | Signal | Weight | 0 = absent | 1 = vague | 2 = specific |
 |--------|--------|------------|-----------|--------------|
@@ -87,12 +105,50 @@ Evaluate each signal on a 0–2 scale:
 | **File boundaries** | 2 | Not mentioned | "Update frontend" | Exact file paths listed |
 | **Acceptance criteria** | 2 | Not mentioned | "Should work" | "Returns 200 with JWT body, 401 on bad creds" |
 | **Negative space** | 2 | Not mentioned | "Keep simple" | "Out of scope: OAuth, refresh tokens, RBAC" |
-| **Decisions resolved** | 1 | Not mentioned | "Use good approach" | "jose lib, RS256, 1hr expiry, httpOnly cookie" |
+| **Decisions resolved** | 2 | Not mentioned | "Use good approach" | "jose lib, RS256, 1hr expiry, httpOnly cookie" |
+
+### Domain-specific scoring checklists
+
+Use the detected spec type to determine what "specific" (score=2) means for each signal. For `fullstack` specs, combine relevant type checklists based on which files are involved.
+
+**Scope — what "specific" (score=2) requires per type:**
+
+| Type | Score 2 requires |
+|------|-----------------|
+| frontend | Component names, element types, exact classNames, literal text content |
+| backend | HTTP method + path, request/response shapes with field names and types, status codes |
+| infra | Resource names, config keys + values, environment variables, IAM/permissions |
+| data | Table/model names, column types + constraints, index definitions, migration direction |
+| ux | Named states (loading, empty, error, success), transitions between them, trigger events |
+| fullstack | Combine relevant type checklists based on which files are involved |
+
+**Acceptance criteria — what "testable" (score=2) requires per type:**
+
+| Type | Score 2 requires |
+|------|-----------------|
+| frontend | Specific elements with exact classNames, text content, DOM structure assertions |
+| backend | Status code + response body shape per scenario, error responses, header assertions |
+| infra | Resource exists assertions, config value checks, health check endpoints |
+| data | Column/constraint existence, data integrity checks, migration reversibility |
+| ux | State transitions complete, correct content per state, timing constraints |
+| fullstack | Appropriate mix from relevant types |
+
+**Decisions resolved — what must be explicit per type:**
+
+| Type | Key decisions that must be explicit |
+|------|-----------------------------------|
+| frontend | Element types (div/section/article), heading levels + classNames, list type (ol/ul/dl), wrapper structure, text content (exact copy vs description) |
+| backend | Auth method + library, error response format, validation approach, status codes per scenario, rate limiting strategy |
+| infra | Provider + region, instance sizes, scaling limits, networking (VPC/subnets), secret management approach |
+| data | Column types (varchar length, decimal precision), cascade rules, null/default handling, index type (btree/gin/unique) |
+| ux | Loading indicator type (skeleton/spinner/shimmer), error display (toast/inline/page), animation duration + easing, empty state content |
+| fullstack | Combine relevant checklists |
 
 **Scoring rules:**
 - Be strict. "Vague" means a human would need to make judgment calls.
 - Score each signal independently.
 - A signal at 0 means the spec literally does not address it.
+- Use the domain-specific checklist for the detected spec type when evaluating whether a signal is "specific" (2) vs "vague" (1).
 
 **Apply learnings during scoring:**
 - **File boundaries:** If the spec lists files but learnings have file coupling rules for those files, check if the coupled files are also listed. If not, cap the score at 1 and note why.
@@ -101,7 +157,7 @@ Evaluate each signal on a 0–2 scale:
 
 If learnings affected any score, note it in the assessment column: "Scored 1/2 (learnings: prisma changes require migrations, not listed)"
 
-Calculate: `determinism_score = round((raw_total / 20) * 10)` where `raw_total = sum of (score × weight)`, max raw = 20.
+Calculate: `determinism_score = round((raw_total / 22) * 10)` where `raw_total = sum of (score × weight)`, max raw = 22.
 
 ## Step 6: Branch based on score
 
@@ -113,12 +169,17 @@ Skip to **Step 8** (print report) using the spec as-is.
 
 **Do NOT just list suggestions. Ask the user targeted questions to fill the gaps.**
 
-For each signal that scored below 2, generate 1-2 specific questions informed by the codebase context you gathered in Step 2 **and the learnings from Step 3**. Questions must be:
+For each signal that scored below 2, generate 1-2 specific questions informed by the codebase context you gathered in Step 2, **the learnings from Step 3**, and **the domain-specific checklist for the detected spec type**. Questions must be:
 
 - **Concrete, not abstract.** Bad: "What files should change?" Good: "The nav bar is in `src/app/layout.tsx`. Should the logo go to the left of the 'Job Finder' text link on line 21, or replace it entirely?"
 - **Offer options when possible.** Use the AskUserQuestion tool with concrete choices derived from the codebase. For example, if the user says "add a logo", offer: "SVG inline in the component" vs "Image file in /public/" vs "Use next/image with an asset".
 - **Scoped to what's missing.** Don't ask about signals that already scored 2.
 - **Informed by learnings.** If learnings flagged a file coupling rule (e.g., "changing schema.prisma also needs migrations"), include this in the question: "Past changes to `prisma/schema.prisma` also required a migration file. Should this spec include a migration?"
+- **Type-aware.** Reference the domain-specific checklist when asking about gaps. Examples:
+  - For a `backend` spec missing decisions: "The spec mentions a POST endpoint but doesn't specify error responses. What status code for validation errors: 400 with `{error, details}` or 422 with `{errors: [...]}`?"
+  - For a `frontend` spec missing decisions: "The spec doesn't specify the heading element for sections. Should they be `<h2 className='text-2xl font-bold'>` or `<h2 className='text-xl font-semibold'>`?"
+  - For a `data` spec missing decisions: "The spec adds a column but doesn't specify the cascade rule. Should it be `ON DELETE CASCADE` or `ON DELETE SET NULL`?"
+  - For an `infra` spec missing decisions: "The spec mentions a deploy pipeline but doesn't specify the runner. Should it use `ubuntu-latest` or a self-hosted runner?"
 
 Ask all questions in a **single AskUserQuestion call** (up to 4 questions). Group related signals if needed to stay within the limit. Make the options specific to the actual codebase — reference real file paths, existing patterns, and component names.
 
@@ -183,6 +244,7 @@ Format your output as:
 ## Spec Guard — Determinism Report
 
 **Spec:** <path or "conversation context">
+**Spec type:** <detected type from Step 4b>
 **Workflow:** <detected workflow>
 **Score:** <N>/10 <if refined: "(refined from N/10)">
 <if learnings applied: "**Learnings applied:** N rules from N previous sessions">
@@ -193,9 +255,9 @@ Format your output as:
 | File boundaries | N/2 | ×2 | N/4 | <one-line reasoning, include learnings note if applicable> |
 | Acceptance criteria | N/2 | ×2 | N/4 | <one-line reasoning> |
 | Negative space | N/2 | ×2 | N/4 | <one-line reasoning> |
-| Decisions resolved | N/2 | ×1 | N/2 | <one-line reasoning> |
+| Decisions resolved | N/2 | ×2 | N/4 | <one-line reasoning> |
 
-**Raw total:** N/20 → **Score: N/10**
+**Raw total:** N/22 → **Score: N/10**
 ```
 
 ## Step 9: Generate contract
@@ -207,6 +269,7 @@ Create the directory `.spec-guard/` if it doesn't exist, then write `.spec-guard
   "version": "1",
   "created_from": "<path to spec file, or 'conversation context (refined)'>",
   "workflow": "<detected workflow>",
+  "spec_type": "<detected spec type from Step 4b>",
   "timestamp": "<current ISO 8601 timestamp>",
   "refined_from_score": "<original score, only if refinement happened>",
   "refined_spec": "<the full refined spec text, only if refinement happened>",

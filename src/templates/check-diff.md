@@ -16,6 +16,8 @@ Read `.spec-guard/contract.json`. If it doesn't exist:
 - Print: "No contract found. Run `/check-spec` first to generate a contract, or showing raw diff stats."
 - Stop after printing stats.
 
+Extract the `spec_type` field from the contract (defaults to `fullstack` if not present). You'll use this for type-aware decision verification in Step 3e and in the report header.
+
 Also read `.spec-guard.json` for `ignoredPaths` configuration. If `.spec-guard.json` doesn't exist, use these defaults:
 ```
 ignoredPaths: ["package-lock.json", "yarn.lock", "pnpm-lock.yaml", "*.snap", ".env*", "*.generated.*"]
@@ -80,13 +82,35 @@ For each criterion in the contract's `acceptance_criteria`:
 - Score each criterion: **✓ met**, **✗ not met**, **? cannot verify from diff alone**
 
 ### 3e: Decision verification
-Extract technical decisions from the refined spec (the **Decisions** section) or the contract's `refined_spec` field. For each decision, verify it was followed in the actual diff:
+Extract technical decisions from the refined spec (the **Decisions** section) or the contract's `refined_spec` field. For each decision, verify it was followed in the actual diff.
 
+Use the `spec_type` from the contract to focus on the right kind of decisions:
+
+**Frontend decisions:**
+- **Element/component choices** — e.g., "use `<section>` not `<div>`" → check the diff for the correct element
+- **Styling choices** — e.g., "`text-2xl font-bold`" → check for exact className
+- **Library choices** — e.g., "inline SVG in JSX" → check that an SVG element exists inline, not an `<img>` tag
+- **Placement choices** — e.g., "replaces 'Job Finder' text" → check that the old text is removed and new element is in place
+
+**Backend decisions:**
 - **Library/package choices** — e.g., "use jose lib" → check if the diff imports `jose` (not `jsonwebtoken` or another lib)
 - **Algorithm/pattern choices** — e.g., "RS256" → grep the diff for "RS256"
+- **Status code choices** — e.g., "422 for validation" → check the diff for 422 status codes
+- **Error format choices** — e.g., "`{error, details}`" → check response shaping in the diff
+
+**Infra decisions:**
+- **Provider/resource choices** — e.g., "use `ubuntu-latest`" → check workflow YAML
+- **Config value choices** — e.g., "NODE_ENV=production" → check env/config files in diff
+- **Networking choices** — e.g., "port 3000" → check for port configuration
+
+**Data decisions:**
+- **Column type choices** — e.g., "VARCHAR(255)" → check migration/schema diff
+- **Constraint choices** — e.g., "ON DELETE CASCADE" → check for cascade rules in diff
+- **Index choices** — e.g., "unique index on email" → check for index definitions
+
+**General (all types):**
 - **Naming conventions** — e.g., "httpOnly cookie" → check for `httpOnly: true` in the diff
-- **Architecture choices** — e.g., "inline SVG in JSX" → check that an SVG element exists inline, not an `<img>` tag
-- **Placement choices** — e.g., "replaces 'Job Finder' text" → check that the old text is removed and new element is in place
+- **Architecture choices** — verify structural patterns match the spec
 
 For each decision, score: **✓ followed**, **✗ violated**, **? cannot verify from diff alone**
 
@@ -113,6 +137,7 @@ Calculate: `compliance_score = round((raw_total / 20) * 10)` where `raw_total = 
 ## Spec Guard — Diff Compliance Report
 
 **Contract:** .spec-guard/contract.json
+**Spec type:** <spec_type from contract, or "fullstack" if not present>
 **Spec determinism score:** N/10
 **Diff compliance score:** N/10
 **Diff base:** <base branch, commit hash, or working tree>

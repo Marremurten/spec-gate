@@ -138,6 +138,7 @@ Calculate: `actual_determinism = round((raw_total / 20) * 10)` where `raw_total 
 ## Spec Guard — Determinism Test Results
 
 **Spec:** <path>
+**Spec type:** <spec_type from contract, or "fullstack" if not present>
 **Predicted determinism score:** N/10 (from /check-spec)
 **Actual determinism score:** N/10 (from this test)
 **Gap:** N points
@@ -223,7 +224,55 @@ Write results to `.spec-guard/determinism-test.json`:
 ```
 
 ### 8b: Update learnings
-Append divergence patterns to `.spec-guard/learnings.json` as decision specificity rules — these are the most valuable learnings since they come from actual agent behavior, not just diff analysis.
+
+Divergence patterns from real agent behavior are the most valuable learnings — they prove exactly where specs fail. Read `.spec-guard/learnings.json` (or start fresh if it doesn't exist) and append new data.
+
+#### What to extract from divergences
+
+For each **semantic divergence** (not cosmetic), create a learning entry:
+
+- **Different files touched** → extract a **file coupling rule**: if one agent changed file X but the other didn't, the spec's file boundaries were ambiguous
+- **Different libraries/imports** → extract a **decision specificity rule**: "Decision 'use auth middleware' was too vague — Agent A used `express-rate-limit`, Agent B used custom middleware"
+- **Different structure/patterns** → extract a **scope specificity rule**: "Spec said 'add error handling' but didn't specify the pattern — Agent A used try/catch, Agent B used error middleware"
+- **Different naming** → extract a **naming rule**: "Spec didn't specify variable/function names — Agent A used `rateLimiter`, Agent B used `throttle`"
+
+#### Write to learnings.json
+
+Append a new entry to the `entries` array:
+
+```json
+{
+  "date": "<ISO timestamp>",
+  "spec_source": "<path>",
+  "spec_score": "<predicted score>",
+  "compliance_score": "<actual determinism score>",
+  "gap": "<predicted - actual>",
+  "source": "determinism_test",
+  "lessons": [
+    {
+      "signal": "decisions_resolved",
+      "spec_scored": 2,
+      "should_have_been": 1,
+      "description": "Spec said 'add rate limiting' but agents chose different libraries (express-rate-limit vs custom). Needs: 'use express-rate-limit with windowMs: 60000, max: 100'"
+    }
+  ]
+}
+```
+
+Also update `scoring_notes` if the predicted score was significantly higher than actual (gap >= 2):
+
+```json
+{
+  "signal": "<over-scored signal>",
+  "note": "Determinism test showed <signal> was over-scored — agents diverged on <what>",
+  "times_over_scored": 1
+}
+```
+
+**Rules for updating existing learnings:**
+- If a `scoring_notes` entry for the same signal exists, increment `times_over_scored`
+- Keep `entries` as an append-only log (max 20, drop oldest if exceeded)
+- Mark entries from determinism tests with `"source": "determinism_test"` so `/check-spec` can distinguish them from `/check-diff` learnings
 
 ### 8c: Clean up worktrees
 ```bash

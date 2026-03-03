@@ -29,9 +29,17 @@ spec-gate adds two validation gates around your implementation:
   │ spec for │───────►  │  Code   │───────► │ diff for  │
   │ gaps     │ contract │         │         │ compliance│
   └─────────┘          └─────────┘         └──────────┘
-       ▲                                        │
-       │         learnings.json                 │
-       └────────────────────────────────────────┘
+       ▲                    │                    │
+       │                    ▼                    │
+       │              /check-determinism         │
+       │              ┌──────────────┐           │
+       │              │ Run spec 2x  │           │
+       │              │ Compare real │           │
+       │              │ outputs      │           │
+       │              └──────────────┘           │
+       │                                         │
+       │         learnings.json                  │
+       └─────────────────────────────────────────┘
                  self-improving loop
 ```
 
@@ -91,13 +99,13 @@ Scores a spec on 5 weighted determinism signals:
 | **File boundaries** | ×2 | Whether exact file paths are listed |
 | **Acceptance criteria** | ×2 | Whether success is testable |
 | **Negative space** | ×2 | Whether out-of-scope items are explicit |
-| **Decisions resolved** | ×1 | Whether technical choices are locked in |
+| **Decisions resolved** | ×2 | Whether technical choices are locked in |
 
 **Score ≥ 8/10:** Generates a contract directly — the spec is deterministic enough.
 
 **Score < 8/10:** Asks targeted refinement questions based on codebase context. Not generic suggestions — real questions with real options derived from your actual code:
 
-> *"The nav bar is in `src/app/layout.tsx`. Should the logo replace the 'Job Finder' text on line 21, or go to the left of it?"*
+> *"The nav bar is in `src/app/layout.tsx`. Should the logo replace the site title text on line 21, or go to the left of it?"*
 
 After refinement, outputs:
 - **Refined spec** → `.spec-gate/refined-spec.md`
@@ -171,6 +179,46 @@ spec-gate auto-detects what produced the spec:
 | **Plan mode** | `/check-spec` with no args → picks up plan from context |
 | **Plan files** | `/check-spec ./my-plan.md` |
 | **spec-kit** | Auto-detected from `.spec-kit/` directory |
+
+## Example: plan mode workflow
+
+A common pattern is to use Claude Code's built-in plan mode to design an approach, then validate it with spec-guard before implementing:
+
+```bash
+# 1. Use plan mode to design the feature
+> Plan how to add rate limiting to the API endpoints
+
+# Claude enters plan mode, explores the codebase, proposes a plan
+# You review and approve the plan
+
+# 2. Before implementing, validate the plan for determinism
+> /check-spec
+
+# spec-guard picks up the plan from context, scores it, and asks
+# refinement questions for any gaps:
+#
+#   Spec type: backend
+#   Score: 6/10
+#
+#   "The plan mentions rate limiting but doesn't specify the strategy.
+#    Should it use fixed window (100 req/min, 429 after) or
+#    sliding window (token bucket, 100 tokens/min)?"
+#
+#   "The plan doesn't specify the error response format.
+#    Should 429 responses return {error, retryAfter} or
+#    use a Retry-After header?"
+
+# 3. After refinement, choose "Implement now" or "Plan first"
+# The contract locks in the decisions so implementation is predictable
+
+# 4. After implementation, validate the diff
+> /check-diff
+
+# spec-guard verifies the code matches the contract —
+# right files changed, decisions followed, criteria met
+```
+
+The key insight: plan mode gives you a *strategy*, spec-guard makes it *deterministic*. A plan might say "add rate limiting middleware" — spec-guard ensures it specifies *which* library, *what* limits, *which* status codes, and *what* error format.
 
 ## Configuration
 
