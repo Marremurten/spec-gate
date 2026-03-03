@@ -35,6 +35,11 @@ export function getScaffoldFiles(): ScaffoldFile[] {
       category: "skill",
     },
     {
+      target: ".claude/skills/check-determinism/SKILL.md",
+      content: readTemplate("check-determinism.md"),
+      category: "skill",
+    },
+    {
       target: ".claude/agents/spec-guard-validator.md",
       content: readTemplate("validator-agent.md"),
       category: "agent",

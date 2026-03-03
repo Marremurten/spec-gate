@@ -1,13 +1,13 @@
 ---
 name: check-diff
-description: Validate git diff against the spec contract. Catches scope creep, missing implementation, and feeds back to improve spec quality.
+description: Validate git diff against the spec contract. Catches scope creep, missing implementation, decision violations, and feeds back to improve spec quality.
 argument-hint: [base-branch]
 disable-model-invocation: true
 ---
 
 # Spec Guard — Gate 2: Diff Validation
 
-You are checking the current git diff against the spec contract to detect **scope creep**, **missing implementation**, and **spec quality gaps**. If a spec scored high on determinism but the implementation diverges, the spec criteria need to be improved — a 10/10 spec should produce identical output every time.
+You are checking the current git diff against the spec contract to detect **scope creep**, **missing implementation**, **decision violations**, and **spec quality gaps**. If a spec scored high on determinism but the implementation diverges, the spec criteria need to be improved — a 10/10 spec should produce identical output every time.
 
 ## Step 1: Load contract
 
@@ -21,7 +21,7 @@ Also read `.spec-guard.json` for `ignoredPaths` configuration. If `.spec-guard.j
 ignoredPaths: ["package-lock.json", "yarn.lock", "pnpm-lock.yaml", "*.snap", ".env*", "*.generated.*"]
 ```
 
-If `.spec-guard/refined-spec.md` exists, read it too — you'll need it for acceptance criteria verification.
+If `.spec-guard/refined-spec.md` exists, read it too — you'll need it for acceptance criteria and decision verification.
 
 Read `.spec-guard/learnings.json` if it exists — you'll append new learnings in Step 8.
 
@@ -79,19 +79,31 @@ For each criterion in the contract's `acceptance_criteria`:
 - Check if the diff evidence supports the criterion being met
 - Score each criterion: **✓ met**, **✗ not met**, **? cannot verify from diff alone**
 
-### 3e: Restricted path check
+### 3e: Decision verification
+Extract technical decisions from the refined spec (the **Decisions** section) or the contract's `refined_spec` field. For each decision, verify it was followed in the actual diff:
+
+- **Library/package choices** — e.g., "use jose lib" → check if the diff imports `jose` (not `jsonwebtoken` or another lib)
+- **Algorithm/pattern choices** — e.g., "RS256" → grep the diff for "RS256"
+- **Naming conventions** — e.g., "httpOnly cookie" → check for `httpOnly: true` in the diff
+- **Architecture choices** — e.g., "inline SVG in JSX" → check that an SVG element exists inline, not an `<img>` tag
+- **Placement choices** — e.g., "replaces 'Job Finder' text" → check that the old text is removed and new element is in place
+
+For each decision, score: **✓ followed**, **✗ violated**, **? cannot verify from diff alone**
+
+### 3f: Restricted path check
 If `.spec-guard.json` defines `restrictedPaths`, check if any changed files match those patterns.
 
 ## Step 4: Score compliance
 
-Calculate a compliance score based on 4 signals:
+Calculate a compliance score based on 5 signals:
 
 | Signal | Weight | Scoring |
 |--------|--------|---------|
 | **File accuracy** | 3 | 2 = all expected files present, no extras. 1 = expected files present but extras too. 0 = expected files missing. |
-| **Boundary respect** | 2 | 2 = within both boundaries. 1 = one boundary exceeded. 0 = both exceeded. |
+| **Boundary respect** | 1 | 2 = within both boundaries. 1 = one boundary exceeded. 0 = both exceeded. |
 | **Acceptance criteria** | 3 | 2 = all criteria met (✓). 1 = some met, some unverifiable (?). 0 = any criteria not met (✗). |
-| **Scope discipline** | 2 | 2 = zero scope creep candidates. 1 = 1-3 extras (minor). 0 = 4+ extras. |
+| **Scope discipline** | 1 | 2 = zero scope creep candidates. 1 = 1-3 extras (minor). 0 = 4+ extras. |
+| **Decision adherence** | 2 | 2 = all decisions followed (✓). 1 = some followed, some unverifiable (?). 0 = any decision violated (✗). |
 
 Calculate: `compliance_score = round((raw_total / 20) * 10)` where `raw_total = sum of (score × weight)`, max raw = 20.
 
@@ -112,9 +124,10 @@ Calculate: `compliance_score = round((raw_total / 20) * 10)` where `raw_total = 
 | Signal | Score | Weight | Weighted | Assessment |
 |--------|-------|--------|----------|------------|
 | File accuracy | N/2 | ×3 | N/6 | <one-line reasoning> |
-| Boundary respect | N/2 | ×2 | N/4 | <one-line reasoning> |
+| Boundary respect | N/2 | ×1 | N/2 | <one-line reasoning> |
 | Acceptance criteria | N/2 | ×3 | N/6 | <one-line reasoning> |
-| Scope discipline | N/2 | ×2 | N/4 | <one-line reasoning> |
+| Scope discipline | N/2 | ×1 | N/2 | <one-line reasoning> |
+| Decision adherence | N/2 | ×2 | N/4 | <one-line reasoning> |
 
 ### File compliance
 
@@ -132,11 +145,20 @@ Calculate: `compliance_score = round((raw_total / 20) * 10)` where `raw_total = 
 | ✗ | Returns 401 on bad creds | No error handling in diff |
 | ? | Visually balanced | Cannot verify from diff |
 
+### Decision adherence
+
+| Status | Decision | Evidence |
+|--------|----------|----------|
+| ✓ | Use jose lib | `import { SignJWT } from "jose"` found in diff |
+| ✗ | RS256 algorithm | Diff uses `HS256` instead |
+| ? | httpOnly cookie | Cookie setting not visible in diff |
+
 ### Summary
 - **In contract:** N/N files
 - **Missing:** N files <list if any>
 - **Scope creep candidates:** N files <list if any>
 - **Boundary violations:** <list if any>
+- **Decision violations:** N <list if any>
 ```
 
 ## Step 6: Spec quality feedback
@@ -155,6 +177,7 @@ For each compliance signal that scored below 2, trace back to the spec signal th
 | Boundaries exceeded | **Scope** scored too high | Spec described the change but underestimated its size |
 | Acceptance criteria not met | **Acceptance criteria** scored too high | Criteria were present but not specific enough to be testable |
 | Scope creep | **Negative space** scored too high | Spec had exclusions but missed adjacent concerns the agent addressed anyway |
+| Decisions violated | **Decisions resolved** scored too high | Decisions were stated but not specific enough (e.g., "use good auth" vs "jose, RS256") |
 
 Print a **Spec feedback** section:
 
@@ -210,7 +233,8 @@ Write the compliance results back to `.spec-guard/contract.json` by adding these
       "file_accuracy": N,
       "boundary_respect": N,
       "acceptance_criteria": N,
-      "scope_discipline": N
+      "scope_discipline": N,
+      "decision_adherence": N
     },
     "checked_at": "<ISO timestamp>",
     "diff_base": "<what was used as base>",
@@ -220,6 +244,9 @@ Write the compliance results back to `.spec-guard/contract.json` by adding these
     "scope_creep_files": ["..."],
     "criteria_results": {
       "<criterion text>": "met|not_met|unverifiable"
+    },
+    "decision_results": {
+      "<decision text>": "followed|violated|unverifiable"
     },
     "adjusted_determinism_score": N
   }
@@ -246,6 +273,9 @@ For each compliance signal that scored below 2 (when the spec scored that signal
 
 - **Scope creep** → extract a **negative space rule**: "When doing X, agents also tend to do Y — explicitly exclude it"
   - Note what the agent did that wasn't asked for
+
+- **Decisions violated** → extract a **decision specificity rule**: "Decision 'X' was too vague — agent interpreted it as 'Y' instead of 'Z'"
+  - Note what the spec said vs what the agent actually did
 
 ### 8b: Build file coupling rules
 

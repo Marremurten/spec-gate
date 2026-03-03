@@ -55,7 +55,16 @@ If a signal has been over-scored multiple times, apply stricter scoring. For exa
 ### 3c: Past lessons
 Review the lessons log for patterns relevant to the current spec. If previous specs in the same area (same files, same domain) had compliance issues, proactively flag them during refinement.
 
-**Do NOT output learnings to the user during this step.** Use them silently to inform scoring and refinement questions.
+### 3d: Project checklist
+
+If learnings have 3+ entries, generate a project-specific checklist of things specs for this project should always address. Build it from:
+- File coupling rules → "Specs that touch X should also list Y"
+- Recurring scoring notes → "This project often under-specifies Z"
+- Past criteria failures → "Acceptance criteria should include test for W"
+
+Store this checklist internally. In Step 6 (refinement), if the spec is missing items from the checklist, include them as pre-filled suggestions in the questions.
+
+**Do NOT output learnings or the checklist to the user during this step.** Use them silently to inform scoring and refinement questions.
 
 ## Step 4: Detect workflow
 
@@ -140,7 +149,19 @@ Using the original spec plus the user's answers, produce a **refined spec block*
 
 **Decisions:**
 - <resolved technical choices>
+
+**Suggested tests:**
+- <test cases derived from acceptance criteria — each criterion that can be verified programmatically becomes a test>
 ```
+
+### Generate test suggestions
+
+For each acceptance criterion, determine if it can be expressed as an automated test:
+- "Returns 200 with JWT body" → `test("POST /api/login returns 200 with token", ...)`
+- "The icon has aria-label" → `test("logo link has aria-label", ...)`
+- "Visually balanced" → skip (visual, not automatable)
+
+Include only automatable criteria. Format as describe/it blocks with the testing framework used in the project (detect from package.json — vitest, jest, playwright, etc.). These go into the refined spec and the contract so check-diff can verify test coverage.
 
 Then **re-score** the refined spec using the same 5 signals (with learnings applied). Print both scores:
 
@@ -207,7 +228,8 @@ Create the directory `.spec-guard/` if it doesn't exist, then write `.spec-guard
     "negative_space": "<0-2>",
     "decisions_resolved": "<0-2>"
   },
-  "learnings_applied": "<number of rules applied, or 0>"
+  "learnings_applied": "<number of rules applied, or 0>",
+  "suggested_tests": ["<test descriptions from refined spec>"]
 }
 ```
 

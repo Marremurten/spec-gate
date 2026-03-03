@@ -22,6 +22,7 @@ describe("init command", () => {
 
     expect(existsSync(join(root, ".claude/skills/check-spec/SKILL.md"))).toBe(true);
     expect(existsSync(join(root, ".claude/skills/check-diff/SKILL.md"))).toBe(true);
+    expect(existsSync(join(root, ".claude/skills/check-determinism/SKILL.md"))).toBe(true);
     expect(existsSync(join(root, ".claude/agents/spec-guard-validator.md"))).toBe(true);
     expect(existsSync(join(root, ".spec-guard.json"))).toBe(true);
     expect(existsSync(join(root, ".claude/settings.json"))).toBe(true);
@@ -38,6 +39,10 @@ describe("init command", () => {
     const checkDiff = readFileSync(join(root, ".claude/skills/check-diff/SKILL.md"), "utf-8");
     expect(checkDiff).toContain("name: check-diff");
     expect(checkDiff).toContain("disable-model-invocation: true");
+
+    const checkDet = readFileSync(join(root, ".claude/skills/check-determinism/SKILL.md"), "utf-8");
+    expect(checkDet).toContain("name: check-determinism");
+    expect(checkDet).toContain("argument-hint:");
   });
 
   it("--skills-only only installs skills and config", () => {
@@ -46,6 +51,7 @@ describe("init command", () => {
 
     expect(existsSync(join(root, ".claude/skills/check-spec/SKILL.md"))).toBe(true);
     expect(existsSync(join(root, ".claude/skills/check-diff/SKILL.md"))).toBe(true);
+    expect(existsSync(join(root, ".claude/skills/check-determinism/SKILL.md"))).toBe(true);
     expect(existsSync(join(root, ".spec-guard.json"))).toBe(true);
     expect(existsSync(join(root, ".claude/agents/spec-guard-validator.md"))).toBe(false);
     // settings.json should NOT have hook when --skills-only
@@ -59,6 +65,7 @@ describe("init command", () => {
     expect(existsSync(join(root, ".claude/agents/spec-guard-validator.md"))).toBe(true);
     expect(existsSync(join(root, ".claude/skills/check-spec/SKILL.md"))).toBe(false);
     expect(existsSync(join(root, ".claude/skills/check-diff/SKILL.md"))).toBe(false);
+    expect(existsSync(join(root, ".claude/skills/check-determinism/SKILL.md"))).toBe(false);
     expect(existsSync(join(root, ".spec-guard.json"))).toBe(false);
   });
 
