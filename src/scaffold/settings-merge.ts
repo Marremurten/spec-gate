@@ -11,9 +11,15 @@ interface HookEntry {
   [key: string]: unknown;
 }
 
+interface MatcherGroup {
+  matcher?: string;
+  hooks: HookEntry[];
+  [key: string]: unknown;
+}
+
 interface Settings {
   hooks?: {
-    Stop?: HookEntry[];
+    Stop?: MatcherGroup[];
     [key: string]: unknown;
   };
   [key: string]: unknown;
@@ -46,17 +52,37 @@ function backupSettings(settingsPath: string, projectRoot: string): string | nul
   return `.spec-gate/backups/settings.json.${ts}.bak`;
 }
 
-function isSpecGuardHook(entry: HookEntry): boolean {
-  const prompt = entry.prompt || "";
-  const agent = entry.agent || "";
-  return prompt.includes(SPEC_GATE_MARKER) || agent.includes(SPEC_GATE_MARKER);
+function isSpecGuardHook(entry: MatcherGroup): boolean {
+  if (!Array.isArray(entry.hooks)) return false;
+  return entry.hooks.some((h) => {
+    const prompt = h.prompt || "";
+    const agent = h.agent || "";
+    return prompt.includes(SPEC_GATE_MARKER) || agent.includes(SPEC_GATE_MARKER);
+  });
 }
 
-function getSpecGuardHook(): HookEntry {
+function getSpecGuardHook(): MatcherGroup {
   return {
-    type: "agent",
-    agent: "spec-gate-validator",
+    hooks: [{ type: "agent", agent: "spec-gate-validator" }],
   };
+}
+
+function isOldFormatEntry(entry: unknown): entry is HookEntry {
+  return (
+    typeof entry === "object" &&
+    entry !== null &&
+    "type" in entry &&
+    !("hooks" in entry)
+  );
+}
+
+function migrateOldFormat(entries: unknown[]): MatcherGroup[] {
+  return entries.map((entry) => {
+    if (isOldFormatEntry(entry)) {
+      return { hooks: [entry as HookEntry] };
+    }
+    return entry as MatcherGroup;
+  });
 }
 
 export function mergeSettings(projectRoot: string): { merged: boolean; backupPath: string | null } {
@@ -78,7 +104,10 @@ export function mergeSettings(projectRoot: string): { merged: boolean; backupPat
     settings.hooks.Stop = [];
   }
 
-  const stopHooks = settings.hooks.Stop as HookEntry[];
+  // Migrate old flat-format entries to new matcher-group format
+  settings.hooks.Stop = migrateOldFormat(settings.hooks.Stop);
+
+  const stopHooks = settings.hooks.Stop;
   const alreadyExists = stopHooks.some(isSpecGuardHook);
 
   if (alreadyExists) {
@@ -106,7 +135,10 @@ export function removeFromSettings(projectRoot: string): { removed: boolean; bac
     return { removed: false, backupPath };
   }
 
-  const stopHooks = settings.hooks.Stop as HookEntry[];
+  // Migrate old flat-format entries to new matcher-group format
+  settings.hooks.Stop = migrateOldFormat(settings.hooks.Stop);
+
+  const stopHooks = settings.hooks.Stop;
   const filtered = stopHooks.filter((entry) => !isSpecGuardHook(entry));
 
   if (filtered.length === stopHooks.length) {

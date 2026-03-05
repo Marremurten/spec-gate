@@ -40,8 +40,7 @@ describe("settings-merge", () => {
       const hooks = settings.hooks as Record<string, unknown[]>;
       expect(hooks.Stop).toHaveLength(1);
       expect(hooks.Stop[0]).toEqual({
-        type: "agent",
-        agent: "spec-gate-validator",
+        hooks: [{ type: "agent", agent: "spec-gate-validator" }],
       });
     });
 
@@ -59,8 +58,8 @@ describe("settings-merge", () => {
       const root = setup({
         permissions: { allow: ["Read"] },
         hooks: {
-          Stop: [{ type: "command", command: "echo done" }],
-          PreToolUse: [{ type: "command", command: "echo pre" }],
+          Stop: [{ hooks: [{ type: "command", command: "echo done" }] }],
+          PreToolUse: [{ hooks: [{ type: "command", command: "echo pre" }] }],
         },
       });
 
@@ -71,8 +70,8 @@ describe("settings-merge", () => {
       expect(settings.permissions).toEqual({ allow: ["Read"] });
       const hooks = settings.hooks as Record<string, unknown[]>;
       expect(hooks.Stop).toHaveLength(2);
-      expect(hooks.Stop[0]).toEqual({ type: "command", command: "echo done" });
-      expect(hooks.Stop[1]).toEqual({ type: "agent", agent: "spec-gate-validator" });
+      expect(hooks.Stop[0]).toEqual({ hooks: [{ type: "command", command: "echo done" }] });
+      expect(hooks.Stop[1]).toEqual({ hooks: [{ type: "agent", agent: "spec-gate-validator" }] });
       expect(hooks.PreToolUse).toHaveLength(1);
     });
 
@@ -91,7 +90,7 @@ describe("settings-merge", () => {
     it("detects existing spec-gate hook by agent name", () => {
       const root = setup({
         hooks: {
-          Stop: [{ type: "agent", agent: "spec-gate-validator" }],
+          Stop: [{ hooks: [{ type: "agent", agent: "spec-gate-validator" }] }],
         },
       });
 
@@ -102,12 +101,31 @@ describe("settings-merge", () => {
     it("detects existing spec-gate hook by prompt content", () => {
       const root = setup({
         hooks: {
-          Stop: [{ type: "prompt", prompt: "Run spec-gate check" }],
+          Stop: [{ hooks: [{ type: "prompt", prompt: "Run spec-gate check" }] }],
         },
       });
 
       const { merged } = mergeSettings(root);
       expect(merged).toBe(false);
+    });
+
+    it("migrates old flat-format entries to matcher-group format", () => {
+      const root = setup({
+        hooks: {
+          Stop: [{ type: "command", command: "echo done" }],
+        },
+      });
+
+      const { merged } = mergeSettings(root);
+
+      expect(merged).toBe(true);
+      const settings = readSettings(root);
+      const hooks = settings.hooks as Record<string, unknown[]>;
+      expect(hooks.Stop).toHaveLength(2);
+      // Old flat entry should be wrapped
+      expect(hooks.Stop[0]).toEqual({ hooks: [{ type: "command", command: "echo done" }] });
+      // New spec-gate entry in new format
+      expect(hooks.Stop[1]).toEqual({ hooks: [{ type: "agent", agent: "spec-gate-validator" }] });
     });
 
     it("creates backup before modifying", () => {
@@ -126,8 +144,8 @@ describe("settings-merge", () => {
       const root = setup({
         hooks: {
           Stop: [
-            { type: "command", command: "echo done" },
-            { type: "agent", agent: "spec-gate-validator" },
+            { hooks: [{ type: "command", command: "echo done" }] },
+            { hooks: [{ type: "agent", agent: "spec-gate-validator" }] },
           ],
         },
       });
@@ -138,13 +156,13 @@ describe("settings-merge", () => {
       const settings = readSettings(root);
       const hooks = settings.hooks as Record<string, unknown[]>;
       expect(hooks.Stop).toHaveLength(1);
-      expect(hooks.Stop[0]).toEqual({ type: "command", command: "echo done" });
+      expect(hooks.Stop[0]).toEqual({ hooks: [{ type: "command", command: "echo done" }] });
     });
 
     it("cleans up empty Stop array and hooks object", () => {
       const root = setup({
         hooks: {
-          Stop: [{ type: "agent", agent: "spec-gate-validator" }],
+          Stop: [{ hooks: [{ type: "agent", agent: "spec-gate-validator" }] }],
         },
       });
 
@@ -158,7 +176,7 @@ describe("settings-merge", () => {
     it("returns removed=false when no spec-gate hooks exist", () => {
       const root = setup({
         hooks: {
-          Stop: [{ type: "command", command: "echo done" }],
+          Stop: [{ hooks: [{ type: "command", command: "echo done" }] }],
         },
       });
 

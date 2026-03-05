@@ -72,7 +72,7 @@ describe("update command", () => {
     const settings = JSON.parse(readFileSync(join(root, ".claude/settings.json"), "utf-8"));
     const hooks = settings.hooks.Stop;
     // Should still have exactly one spec-gate hook
-    const specGateHooks = hooks.filter((h: any) => h.agent === "spec-gate-validator");
+    const specGateHooks = hooks.filter((h: any) => h.hooks?.some((inner: any) => inner.agent === "spec-gate-validator"));
     expect(specGateHooks).toHaveLength(1);
   });
 });

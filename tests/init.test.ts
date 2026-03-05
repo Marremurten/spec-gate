@@ -108,7 +108,7 @@ describe("init command", () => {
 
     const settings = JSON.parse(readFileSync(join(root, ".claude/settings.json"), "utf-8"));
     expect(settings.hooks.Stop).toEqual([
-      { type: "agent", agent: "spec-gate-validator" },
+      { hooks: [{ type: "agent", agent: "spec-gate-validator" }] },
     ]);
   });
 });
