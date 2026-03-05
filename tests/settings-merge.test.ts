@@ -109,6 +109,23 @@ describe("settings-merge", () => {
       expect(merged).toBe(false);
     });
 
+    it("migrates existing old-format spec-gate hook on disk even when not adding", () => {
+      const root = setup({
+        hooks: {
+          Stop: [{ type: "agent", agent: "spec-gate-validator" }],
+        },
+      });
+
+      const { merged } = mergeSettings(root);
+
+      expect(merged).toBe(false);
+      const settings = readSettings(root);
+      const hooks = settings.hooks as Record<string, unknown[]>;
+      expect(hooks.Stop).toHaveLength(1);
+      // Should be migrated to new format on disk
+      expect(hooks.Stop[0]).toEqual({ hooks: [{ type: "agent", agent: "spec-gate-validator" }] });
+    });
+
     it("migrates old flat-format entries to matcher-group format", () => {
       const root = setup({
         hooks: {

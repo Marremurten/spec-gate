@@ -105,12 +105,17 @@ export function mergeSettings(projectRoot: string): { merged: boolean; backupPat
   }
 
   // Migrate old flat-format entries to new matcher-group format
-  settings.hooks.Stop = migrateOldFormat(settings.hooks.Stop);
+  const original = settings.hooks.Stop;
+  settings.hooks.Stop = migrateOldFormat(original);
+  const migrated = JSON.stringify(original) !== JSON.stringify(settings.hooks.Stop);
 
   const stopHooks = settings.hooks.Stop;
   const alreadyExists = stopHooks.some(isSpecGuardHook);
 
   if (alreadyExists) {
+    if (migrated) {
+      writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n", "utf-8");
+    }
     return { merged: false, backupPath };
   }
 
