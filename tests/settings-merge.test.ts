@@ -131,6 +131,25 @@ describe("settings-merge", () => {
       expect(hooks.Stop[0]).toEqual(SPEC_GATE_HOOK_ENTRY);
     });
 
+    it("migrates matcher-group agent hook missing prompt and persists to disk", () => {
+      // Simulates the state after a previous migration wrapped the flat entry
+      // but before the prompt field was added
+      const root = setup({
+        hooks: {
+          Stop: [{ hooks: [{ type: "agent", agent: "spec-gate-validator" }] }],
+        },
+      });
+
+      const { merged } = mergeSettings(root);
+
+      expect(merged).toBe(false);
+      const settings = readSettings(root);
+      const hooks = settings.hooks as Record<string, unknown[]>;
+      expect(hooks.Stop).toHaveLength(1);
+      // Should have prompt added on disk
+      expect(hooks.Stop[0]).toEqual(SPEC_GATE_HOOK_ENTRY);
+    });
+
     it("migrates old flat-format entries to matcher-group format", () => {
       const root = setup({
         hooks: {
