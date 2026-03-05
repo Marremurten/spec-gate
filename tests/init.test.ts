@@ -107,8 +107,10 @@ describe("init command", () => {
     init(root, { skillsOnly: false, hooksOnly: false, force: false });
 
     const settings = JSON.parse(readFileSync(join(root, ".claude/settings.json"), "utf-8"));
-    expect(settings.hooks.Stop).toEqual([
-      { hooks: [{ type: "agent", agent: "spec-gate-validator" }] },
-    ]);
+    expect(settings.hooks.Stop).toHaveLength(1);
+    const hook = settings.hooks.Stop[0].hooks[0];
+    expect(hook.type).toBe("agent");
+    expect(hook.agent).toBe("spec-gate-validator");
+    expect(hook.prompt).toContain("spec-gate-validator");
   });
 });

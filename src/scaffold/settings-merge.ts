@@ -63,7 +63,14 @@ function isSpecGuardHook(entry: MatcherGroup): boolean {
 
 function getSpecGuardHook(): MatcherGroup {
   return {
-    hooks: [{ type: "agent", agent: "spec-gate-validator" }],
+    hooks: [
+      {
+        type: "agent",
+        agent: "spec-gate-validator",
+        prompt:
+          "You are the spec-gate-validator. Read .claude/agents/spec-gate-validator.md for your full instructions, then follow them. $ARGUMENTS",
+      },
+    ],
   };
 }
 
@@ -76,12 +83,28 @@ function isOldFormatEntry(entry: unknown): entry is HookEntry {
   );
 }
 
+function migrateAgentHook(h: HookEntry): HookEntry {
+  if (h.type === "agent" && h.agent?.includes(SPEC_GATE_MARKER) && !h.prompt) {
+    return {
+      ...h,
+      prompt:
+        "You are the spec-gate-validator. Read .claude/agents/spec-gate-validator.md for your full instructions, then follow them. $ARGUMENTS",
+    };
+  }
+  return h;
+}
+
 function migrateOldFormat(entries: unknown[]): MatcherGroup[] {
   return entries.map((entry) => {
     if (isOldFormatEntry(entry)) {
-      return { hooks: [entry as HookEntry] };
+      return { hooks: [migrateAgentHook(entry as HookEntry)] };
     }
-    return entry as MatcherGroup;
+    // Also migrate agent hooks inside existing matcher groups
+    const group = entry as MatcherGroup;
+    if (Array.isArray(group.hooks)) {
+      return { ...group, hooks: group.hooks.map(migrateAgentHook) };
+    }
+    return group;
   });
 }
 

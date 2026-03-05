@@ -5,6 +5,13 @@ import { mergeSettings, removeFromSettings } from "../src/scaffold/settings-merg
 
 const TEST_DIR = join(import.meta.dirname, ".tmp-settings-test");
 
+const SPEC_GATE_PROMPT =
+  "You are the spec-gate-validator. Read .claude/agents/spec-gate-validator.md for your full instructions, then follow them. $ARGUMENTS";
+
+const SPEC_GATE_HOOK_ENTRY = {
+  hooks: [{ type: "agent", agent: "spec-gate-validator", prompt: SPEC_GATE_PROMPT }],
+};
+
 function setup(settings?: object): string {
   rmSync(TEST_DIR, { recursive: true, force: true });
   mkdirSync(TEST_DIR, { recursive: true });
@@ -39,9 +46,7 @@ describe("settings-merge", () => {
       expect(settings.hooks).toBeDefined();
       const hooks = settings.hooks as Record<string, unknown[]>;
       expect(hooks.Stop).toHaveLength(1);
-      expect(hooks.Stop[0]).toEqual({
-        hooks: [{ type: "agent", agent: "spec-gate-validator" }],
-      });
+      expect(hooks.Stop[0]).toEqual(SPEC_GATE_HOOK_ENTRY);
     });
 
     it("merges into empty settings", () => {
@@ -71,7 +76,7 @@ describe("settings-merge", () => {
       const hooks = settings.hooks as Record<string, unknown[]>;
       expect(hooks.Stop).toHaveLength(2);
       expect(hooks.Stop[0]).toEqual({ hooks: [{ type: "command", command: "echo done" }] });
-      expect(hooks.Stop[1]).toEqual({ hooks: [{ type: "agent", agent: "spec-gate-validator" }] });
+      expect(hooks.Stop[1]).toEqual(SPEC_GATE_HOOK_ENTRY);
       expect(hooks.PreToolUse).toHaveLength(1);
     });
 
@@ -90,7 +95,7 @@ describe("settings-merge", () => {
     it("detects existing spec-gate hook by agent name", () => {
       const root = setup({
         hooks: {
-          Stop: [{ hooks: [{ type: "agent", agent: "spec-gate-validator" }] }],
+          Stop: [SPEC_GATE_HOOK_ENTRY],
         },
       });
 
@@ -123,7 +128,7 @@ describe("settings-merge", () => {
       const hooks = settings.hooks as Record<string, unknown[]>;
       expect(hooks.Stop).toHaveLength(1);
       // Should be migrated to new format on disk
-      expect(hooks.Stop[0]).toEqual({ hooks: [{ type: "agent", agent: "spec-gate-validator" }] });
+      expect(hooks.Stop[0]).toEqual(SPEC_GATE_HOOK_ENTRY);
     });
 
     it("migrates old flat-format entries to matcher-group format", () => {
@@ -142,7 +147,7 @@ describe("settings-merge", () => {
       // Old flat entry should be wrapped
       expect(hooks.Stop[0]).toEqual({ hooks: [{ type: "command", command: "echo done" }] });
       // New spec-gate entry in new format
-      expect(hooks.Stop[1]).toEqual({ hooks: [{ type: "agent", agent: "spec-gate-validator" }] });
+      expect(hooks.Stop[1]).toEqual(SPEC_GATE_HOOK_ENTRY);
     });
 
     it("creates backup before modifying", () => {
@@ -162,7 +167,7 @@ describe("settings-merge", () => {
         hooks: {
           Stop: [
             { hooks: [{ type: "command", command: "echo done" }] },
-            { hooks: [{ type: "agent", agent: "spec-gate-validator" }] },
+            SPEC_GATE_HOOK_ENTRY,
           ],
         },
       });
@@ -179,7 +184,7 @@ describe("settings-merge", () => {
     it("cleans up empty Stop array and hooks object", () => {
       const root = setup({
         hooks: {
-          Stop: [{ hooks: [{ type: "agent", agent: "spec-gate-validator" }] }],
+          Stop: [SPEC_GATE_HOOK_ENTRY],
         },
       });
 
