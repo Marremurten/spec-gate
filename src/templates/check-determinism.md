@@ -1,7 +1,7 @@
 ---
 name: check-determinism
 description: Test if a spec truly produces identical output by comparing how two independent agents interpret it. Defaults to a fast outline-based comparison; use --full for real implementations.
-argument-hint: [--full] [path-to-spec-or-contract]
+argument-hint: [--full] [--demo] [path-to-spec-or-contract]
 ---
 
 # Spec Gate — Determinism Test
@@ -25,10 +25,13 @@ Also read `.spec-gate/contract.json` if it exists — you'll compare the determi
 
 ## Step 2: Detect mode
 
-Check if `$ARGUMENTS` contains `--full`:
+Check `$ARGUMENTS` for flags:
 
-- **`--full` present** → Full mode (two real implementations in worktrees). Expensive but definitive.
-- **`--full` absent** → Light mode (default). Two agents produce detailed outlines, no real code written. Fast and cheap.
+- **`--full`** → Full mode (two real implementations in worktrees). Expensive but definitive.
+- **`--demo`** → Light mode with outlines saved to `.spec-gate/` for inspection.
+- **No flags** → Light mode (default). Two agents produce detailed outlines, no real code written. Fast and cheap.
+
+`--demo` can be combined with `--full` — in that case, run full mode but also save the comparison artifacts.
 
 ## Step 3: Confirm with user
 
@@ -97,6 +100,15 @@ Do NOT write full implementations — just the outline with critical lines.
 **Critical:** Both agents must receive identical prompts. No additional context, no codebase hints, no learnings. The spec must stand on its own.
 
 Launch both agents simultaneously using parallel Agent tool calls. Wait for both to complete.
+
+### Step 4L-demo: Save outlines (if `--demo`)
+
+If `--demo` is set, write each agent's raw outline to a file so the user can inspect them:
+
+- `.spec-gate/determinism-outline-a.md` — Agent A's full outline
+- `.spec-gate/determinism-outline-b.md` — Agent B's full outline
+
+These files are written before comparison so the user can review them even if something goes wrong in later steps.
 
 ### Step 5L: Compare outlines
 
@@ -170,6 +182,19 @@ When done, list the files you changed.
 **Critical:** Both agents must receive identical prompts. No additional context, no codebase hints, no learnings. The spec must stand on its own.
 
 Launch both agents simultaneously using parallel Agent tool calls. Wait for both to complete.
+
+### Step 4F-demo: Save worktree paths (if `--demo`)
+
+If `--demo` is set, do NOT clean up the worktrees at the end (skip Step 10c). Instead, print the worktree paths so the user can inspect both implementations:
+
+```
+### Demo artifacts
+Agent A worktree: <worktree-a-path>
+Agent B worktree: <worktree-b-path>
+
+Inspect with: diff <worktree-a-path>/src <worktree-b-path>/src
+Clean up manually: git worktree remove <path> --force
+```
 
 ### Step 5F: Compare outputs
 
@@ -401,9 +426,11 @@ Also update `scoring_notes` if the predicted score was significantly higher than
 - Keep `entries` as an append-only log (max 20, drop oldest if exceeded)
 - Mark entries from determinism tests with `"source": "determinism_test"` so `/check-spec` can distinguish them from `/check-diff` learnings
 
-### 10c: Clean up (full mode only)
+### 10c: Clean up (full mode only, skip if `--demo`)
 
-If the Agent tool worktrees were not automatically cleaned up, remove them using the paths returned by the Agent tool results:
+If `--demo` is set, skip cleanup — the user wants to inspect the worktrees manually.
+
+Otherwise, if the Agent tool worktrees were not automatically cleaned up, remove them using the paths returned by the Agent tool results:
 ```bash
 git worktree remove <worktree-a-path> --force
 git worktree remove <worktree-b-path> --force
@@ -415,7 +442,9 @@ git worktree remove <worktree-b-path> --force
 ### Results saved
 - Determinism test results: `.spec-gate/determinism-test.json`
 - Learnings updated with N divergence patterns
-<if full mode: "- Worktrees cleaned up">
+<if full mode and not --demo: "- Worktrees cleaned up">
+<if --demo and light mode: "- Agent outlines saved to .spec-gate/determinism-outline-a.md and .spec-gate/determinism-outline-b.md">
+<if --demo and full mode: "- Worktrees preserved for inspection (clean up manually with git worktree remove)">
 ```
 
 **Important:** This is always advisory. A low actual determinism score doesn't mean the spec is bad — it means there's room to make it more specific. Some amount of implementation variance is natural and acceptable.
